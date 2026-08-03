@@ -10,7 +10,7 @@ import { SettingsPage } from '@/modules/settings'
 export function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/aterstall-losenord" element={<ResetPasswordPage />} />
