@@ -7,7 +7,7 @@ import {
   type FormEvent,
   type ReactNode
 } from 'react'
-import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/shared/services/supabase'
 type AuthContextValue = { session: Session | null; loading: boolean; signOut: () => Promise<void> }
@@ -49,6 +49,7 @@ export function ProtectedRoute() {
 }
 export function LoginPage() {
   const [message, setMessage] = useState('')
+  const navigate = useNavigate()
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -60,7 +61,11 @@ export function LoginPage() {
       email: String(data.get('email')),
       password: String(data.get('password'))
     })
-    setMessage(error ? error.message : '')
+if (error) {
+  setMessage(error.message)
+} else {
+  navigate('/', { replace: true })
+} 
   }
   return (
     <main className="auth-page">
