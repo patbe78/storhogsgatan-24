@@ -61,11 +61,11 @@ export function LoginPage() {
       email: String(data.get('email')),
       password: String(data.get('password'))
     })
-if (error) {
-  setMessage(error.message)
-} else {
-  navigate('/', { replace: true })
-} 
+    if (error) {
+      setMessage(error.message)
+    } else {
+      navigate('/', { replace: true })
+    }
   }
   return (
     <main className="auth-page">
