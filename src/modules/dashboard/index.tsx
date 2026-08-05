@@ -21,7 +21,7 @@ export function DashboardPage() {
         <DateWidget />
         <WeekWidget />
         <FamilyWidget />
-        <EventsWidget />
+        <EventsWidget profileId={profile?.id} />
         <ShortcutsWidget />
       </div>
     </>

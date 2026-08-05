@@ -21,6 +21,8 @@
     "@tanstack/react-query": "latest",
     "class-variance-authority": "latest",
     "clsx": "latest",
+    "date-fns": "^4.4.0",
+    "date-fns-tz": "^3.2.0",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",

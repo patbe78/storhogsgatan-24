@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { useUpcomingCalendarEvents } from '@/modules/calendar'
+import './dashboard-calendar.css'
 export function Widget({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="widget">
@@ -37,10 +39,31 @@ export function FamilyWidget() {
     </Widget>
   )
 }
-export function EventsWidget() {
+export function EventsWidget({ profileId }: { profileId?: string }) {
+  const events = useUpcomingCalendarEvents(profileId, 5)
   return (
     <Widget title="Kommande aktiviteter">
-      <p className="muted">Inga aktiviteter att visa ännu.</p>
+      {events.isLoading && profileId && <p className="muted">Laddar aktiviteter…</p>}
+      {events.isError && (
+        <p className="muted" role="alert">
+          Aktiviteterna kunde inte laddas.
+        </p>
+      )}
+      {events.data?.length === 0 && <p className="muted">Inga aktiviteter att visa ännu.</p>}
+      {events.data && events.data.length > 0 && (
+        <ul className="dashboard-events">
+          {events.data.map((item) => (
+            <li key={item.key} style={{ '--event-color': item.color } as React.CSSProperties}>
+              <Link to={`/kalender?event=${encodeURIComponent(item.key)}`}>
+                <strong>{item.title}</strong>
+                <span>
+                  {item.dateLabel} · {item.timeLabel}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </Widget>
   )
 }

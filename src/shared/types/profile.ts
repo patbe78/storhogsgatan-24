@@ -5,6 +5,7 @@ export interface Profile {
   role: 'admin' | 'adult' | 'member' | 'guest'
   avatar_url: string | null
   color: string | null
+  household_id: string | null
   created_at: string
   updated_at: string
 }

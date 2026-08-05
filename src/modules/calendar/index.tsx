@@ -1,8 +1,3 @@
-export function CalendarPage() {
-  return (
-    <section className="placeholder">
-      <h1>Kalender</h1>
-      <p>Kalenderfunktionalitet byggs i en kommande sprint.</p>
-    </section>
-  )
-}
+export { CalendarPage } from './pages/CalendarPage'
+export { useUpcomingCalendarEvents } from './hooks/useUpcomingCalendarEvents'
+export type { CalendarOccurrence } from './types/calendar-event'
