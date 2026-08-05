@@ -6,6 +6,9 @@ import { DashboardPage } from './index'
 vi.mock('@/shared/services/profile', () => ({
   getCurrentProfile: vi.fn()
 }))
+vi.mock('@/modules/calendar', () => ({
+  useUpcomingCalendarEvents: () => ({ data: [], isLoading: false, isError: false })
+}))
 
 import { getCurrentProfile } from '@/shared/services/profile'
 
@@ -37,6 +40,7 @@ describe('DashboardPage', () => {
       role: 'member',
       avatar_url: null,
       color: null,
+      household_id: '24000000-0000-4000-8000-000000000024',
       created_at: '2026-08-03T00:00:00.000Z',
       updated_at: '2026-08-03T00:00:00.000Z'
     })
