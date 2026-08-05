@@ -6,32 +6,49 @@ import { defineConfig } from 'vite'
 
 export default defineConfig(({ mode }) => ({
   base: mode === 'production' ? '/storhogsgatan-24/' : '/',
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version ?? '0.4.0')
+  },
   plugins: [
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['apple-touch-icon.svg'],
+      registerType: 'prompt',
+      includeAssets: ['apple-touch-icon-180.png', 'favicon.svg'],
       manifest: {
         name: 'Storhogsgatan 24',
-        short_name: 'Storhogsgatan 24',
-        description: 'Familjens digitala hem.',
+        short_name: 'Storhogsgatan',
+        description: 'Familjens kalender och vardag på ett ställe.',
         lang: 'sv-SE',
-        start_url: './',
+        start_url: mode === 'production' ? '/storhogsgatan-24/' : '/',
+        scope: mode === 'production' ? '/storhogsgatan-24/' : '/',
         display: 'standalone',
+        orientation: 'any',
         theme_color: '#f8fafc',
         background_color: '#f8fafc',
         icons: [
-          { src: 'icons/icon-192.svg', sizes: '192x192', type: 'image/svg+xml', purpose: 'any' },
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           {
-            src: 'icons/icon-512.svg',
+            src: 'icons/icon-maskable-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'maskable'
+          },
+          {
+            src: 'icons/icon-maskable-512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
-            purpose: 'any maskable'
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
       },
-      workbox: { navigateFallback: 'index.html', globPatterns: ['**/*.{js,css,html,svg,png,ico}'] }
+      workbox: {
+        navigateFallback: 'index.html',
+        cleanupOutdatedCaches: true,
+        globPatterns: ['**/*.{js,css,html,woff2}'],
+        runtimeCaching: []
+      }
     })
   ],
   resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },

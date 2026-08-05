@@ -1,10 +1,17 @@
 @import 'tailwindcss';
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+}
 * {
   box-sizing: border-box;
 }
 body {
   margin: 0;
   min-width: 320px;
+  min-height: 100dvh;
   color: #172033;
   background: #f7f8fb;
   font-family:
@@ -26,14 +33,14 @@ a {
   color: #2563eb;
 }
 .app-shell {
-  min-height: 100vh;
+  min-height: 100dvh;
 }
 .header {
-  height: 64px;
+  height: calc(64px + var(--safe-top));
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 0 24px;
+  padding: var(--safe-top) max(24px, var(--safe-right)) 0 max(24px, var(--safe-left));
   background: #fffffff0;
   border-bottom: 1px solid #eaecf0;
   position: fixed;
@@ -54,9 +61,9 @@ a {
 .sidebar {
   width: 252px;
   position: fixed;
-  top: 64px;
+  top: calc(64px + var(--safe-top));
   bottom: 0;
-  padding: 24px 12px;
+  padding: 24px 12px calc(24px + var(--safe-bottom)) max(12px, var(--safe-left));
   background: #fff;
   border-right: 1px solid #eaecf0;
   z-index: 10;
@@ -81,7 +88,8 @@ a {
   color: #1d4ed8;
 }
 .content {
-  padding: 112px 48px 48px 300px;
+  padding: calc(112px + var(--safe-top)) max(48px, var(--safe-right))
+    calc(48px + var(--safe-bottom)) calc(300px + var(--safe-left));
   max-width: 1500px;
 }
 .page-heading {
@@ -157,7 +165,8 @@ a {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: max(24px, var(--safe-top)) max(24px, var(--safe-right)) max(24px, var(--safe-bottom))
+    max(24px, var(--safe-left));
 }
 .auth-card {
   width: min(100%, 440px);
@@ -199,7 +208,7 @@ a {
 }
 @media (max-width: 760px) {
   .header {
-    padding: 0 16px;
+    padding: var(--safe-top) max(16px, var(--safe-right)) 0 max(16px, var(--safe-left));
   }
   .menu-button {
     display: inline-flex;
@@ -215,13 +224,14 @@ a {
   .backdrop {
     display: block;
     position: fixed;
-    inset: 64px 0 0;
+    inset: calc(64px + var(--safe-top)) 0 0;
     z-index: 5;
     border: 0;
     background: #10182840;
   }
   .content {
-    padding: 96px 18px 28px;
+    padding: calc(96px + var(--safe-top)) max(18px, var(--safe-right))
+      calc(28px + var(--safe-bottom)) max(18px, var(--safe-left));
   }
   .widget {
     grid-column: span 12;
@@ -233,5 +243,16 @@ a {
 @media (min-width: 761px) and (max-width: 1050px) {
   .widget {
     grid-column: span 6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

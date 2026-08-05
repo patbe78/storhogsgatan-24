@@ -1,6 +1,6 @@
 # Storhogsgatan 24
 
-En långsiktigt hållbar React-baserad grund för familjens digitala hem. Sprint 1 innehåller en feature-first arkitektur, responsivt applikationsskal, autentiseringsinfrastruktur, dashboard-widgets, PWA och CI/CD.
+En React-baserad webbapp för familjens gemensamma vardag, med autentisering, dashboard, kalender och ett responsivt applikationsskal.
 
 ## Installation
 
@@ -16,10 +16,20 @@ npm run build
 
 Kopiera `.env.example` till `.env` och ange `VITE_SUPABASE_URL` samt `VITE_SUPABASE_ANON_KEY`. Autentisering använder Supabase Auth med sessionspersistens. Utan variabler visas inloggningssidan men inga anrop görs.
 
-## GitHub Pages och publicering
+## PWA
 
-Pusha till `main`. GitHub Actions kör `npm ci`, lint, tester och bygge, och publicerar sedan `dist` till GitHub Pages. I repots **Settings → Pages**, välj **GitHub Actions** som källa en gång. För ny version: höj version vid behov, verifiera kommandona ovan och pusha/merga till `main`.
+Appen kan installeras på kompatibla Android-webbläsare via webbläsarens installationsprompt och på iPhone/iPad via Safaris Lägg till på hemskärmen. Installation, offline-status, version och manuell uppdateringskontroll finns under Inställningar → App.
 
-## Avsiktligt utanför Sprint 1
+- [Installationsguide](docs/pwa-installation.md)
+- [Manuell testplan](docs/pwa-manual-test.md)
+- [Rollback](docs/pwa-rollback.md)
 
-Ingen kalenderfunktion, tvättbokningslogik, inköpslistefunktion, databas eller API-logik har byggts. Dessa moduler är medvetet endast placeholders.
+Service workern precachar endast statiska byggfiler. Supabase-data runtime-cachas inte. Nya versioner aktiveras genom ett kontrollerat promptflöde och aldrig medan ett registrerat formulär har osparade ändringar.
+
+## GitHub Pages och CI/CD
+
+Pull Requests kör installation, lint, tester och produktionsbygge utan Pages-rättigheter och utan uppladdning av Pages-artifact. Uppladdning och deploy sker endast vid push till `main`. Appens produktionsbas är `/storhogsgatan-24/`; en base-aware 404-fallback återställer direkta klientrutter utan reload-loop.
+
+## Avgränsning för Sprint 4A
+
+Sprinten innehåller inga SQL-migrationer, familjeinbjudningar, Edge Functions, Auth Admin API-anrop, medlemsadministration, profilavaktivering eller auditlogg.

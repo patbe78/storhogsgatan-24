@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { OnboardingDialog } from '@/modules/pwa'
 import { navigationItems } from '@/shared/components/navigation'
 import { useAuth } from '@/modules/auth'
 export function AppShell() {
@@ -44,6 +45,7 @@ export function AppShell() {
       <main className="content">
         <Outlet />
       </main>
+      <OnboardingDialog />
     </div>
   )
 }

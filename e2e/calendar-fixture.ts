@@ -65,4 +65,8 @@ export async function login(page: Page) {
   await page.getByLabel('Lösenord').fill('testlösenord')
   await page.getByRole('button', { name: 'Logga in' }).click()
   await expect(page.getByRole('heading', { name: 'Välkommen Patrik' })).toBeVisible()
+  const onboarding = page.getByRole('dialog', { name: 'Se familjens kalender' })
+  if (await onboarding.isVisible()) {
+    await onboarding.getByRole('button', { name: 'Hoppa över', exact: true }).click()
+  }
 }
