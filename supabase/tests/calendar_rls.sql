@@ -36,6 +36,54 @@ begin
   perform public.calendar_save_event(owned_id, '{"title":"Member uppdaterad","description":"Test","allDay":false,"startsAt":"2026-08-11T08:00:00Z","endsAt":"2026-08-11T09:00:00Z","isFamilyEvent":false,"participantIds":["91000000-0000-4000-8000-000000000002"],"reminderType":"none","recurrence":null}'::jsonb);
 end $$;
 
+-- Beskrivning är frivillig, normaliseras till tom sträng och behåller maxgränsen.
+do $$
+declare
+  base_payload jsonb := jsonb_build_object(
+    'allDay', false,
+    'startsAt', '2026-08-12T08:00:00Z',
+    'endsAt', '2026-08-12T09:00:00Z',
+    'isFamilyEvent', false,
+    'participantIds', jsonb_build_array('91000000-0000-4000-8000-000000000002'),
+    'reminderType', 'none',
+    'recurrence', null
+  );
+  event_id uuid;
+  stored_description text;
+  rejected boolean := false;
+begin
+  event_id := public.calendar_save_event(null, base_payload || jsonb_build_object('title', 'Tom beskrivning', 'description', ''));
+  select description into stored_description from public.calendar_events where id = event_id;
+  if stored_description <> '' then raise exception 'TEST_FAILED_EMPTY_DESCRIPTION_NOT_STORED'; end if;
+
+  event_id := public.calendar_save_event(null, base_payload || jsonb_build_object('title', 'Blank beskrivning', 'description', '   '));
+  select description into stored_description from public.calendar_events where id = event_id;
+  if stored_description <> '' then raise exception 'TEST_FAILED_BLANK_DESCRIPTION_NOT_NORMALIZED'; end if;
+
+  event_id := public.calendar_save_event(null, base_payload || jsonb_build_object('title', 'Saknad beskrivning'));
+  select description into stored_description from public.calendar_events where id = event_id;
+  if stored_description <> '' then raise exception 'TEST_FAILED_MISSING_DESCRIPTION_NOT_NORMALIZED'; end if;
+
+  event_id := public.calendar_save_event(null, base_payload || jsonb_build_object('title', 'Befintlig beskrivning', 'description', '  Planering  '));
+  select description into stored_description from public.calendar_events where id = event_id;
+  if stored_description <> 'Planering' then raise exception 'TEST_FAILED_DESCRIPTION_NOT_PRESERVED'; end if;
+
+  begin
+    perform public.calendar_save_event(null, base_payload || jsonb_build_object('title', 'För lång', 'description', repeat('x', 2001)));
+  exception when invalid_parameter_value then
+    rejected := true;
+  end;
+  if not rejected then raise exception 'TEST_FAILED_LONG_DESCRIPTION_ACCEPTED'; end if;
+
+  rejected := false;
+  begin
+    perform public.calendar_save_event(null, base_payload || jsonb_build_object('title', '', 'description', ''));
+  exception when invalid_parameter_value then
+    rejected := true;
+  end;
+  if not rejected then raise exception 'TEST_FAILED_EMPTY_TITLE_ACCEPTED'; end if;
+end $$;
+
 -- Member får inte flytta sig till annat hushåll.
 do $$ begin
   begin

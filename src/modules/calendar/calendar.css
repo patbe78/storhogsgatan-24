@@ -279,9 +279,10 @@
   justify-items: end;
 }
 .calendar-dialog {
-  width: min(100%, 620px);
+  width: min(100%, 700px);
   height: 100%;
   overflow-y: auto;
+  overflow-x: hidden;
   background: #fff;
   padding: 24px;
   box-shadow: -12px 0 40px #10182833;
@@ -298,7 +299,8 @@
 }
 .calendar-event-form {
   display: grid;
-  gap: 16px;
+  gap: 20px;
+  min-width: 0;
 }
 .calendar-event-form label,
 .category-manager label {
@@ -310,6 +312,7 @@
 .calendar-event-form select,
 .calendar-event-form textarea,
 .category-manager input {
+  box-sizing: border-box;
   width: 100%;
   padding: 10px;
   border: 1px solid #d0d5dd;
@@ -318,6 +321,68 @@
 .calendar-event-form textarea {
   min-height: 90px;
   resize: vertical;
+}
+.calendar-event-form .calendar-description-textarea {
+  min-height: 64px;
+  max-height: 180px;
+  line-height: 1.5;
+  resize: none;
+  overflow-x: hidden;
+  overflow-y: hidden;
+}
+.form-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.calendar-form-section {
+  display: grid;
+  gap: 14px;
+}
+.calendar-form-section h3 {
+  margin: 0;
+  font-size: 17px;
+}
+.calendar-event-form .calendar-checkbox-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  font-weight: 650;
+}
+.calendar-checkbox-row input[type='checkbox'] {
+  flex: 0 0 auto;
+  margin: 0;
+}
+.all-day-toggle {
+  padding: 2px 0;
+}
+.date-time-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.date-time-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid #dfe3e8;
+  border-radius: 12px;
+}
+.date-time-group legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+.date-time-group .field-error {
+  grid-column: 1 / -1;
+}
+.date-time-group > .form-field:only-of-type {
+  grid-column: 1 / -1;
 }
 .form-row {
   display: flex;
@@ -335,15 +400,28 @@
 .form-fieldset legend {
   font-weight: 700;
 }
+.participant-fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.family-participant-option {
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eaecf0;
+}
 .participant-picker {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px 12px;
 }
-.participant-picker label {
+.participant-picker label,
+.participant-option {
   display: flex;
   flex-direction: row;
   align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 0;
 }
 .color-dot {
   display: inline-block;
@@ -352,19 +430,34 @@
   border-radius: 50%;
   margin-right: 6px;
 }
+.participant-color-dot {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  margin-right: 0;
+  border: 1px solid #475467;
+  box-shadow: 0 0 0 1px #fff inset;
+}
 .form-help {
   font-size: 12px;
   color: #667085;
 }
 .field-error {
+  display: block;
   color: #b42318;
   font-size: 13px;
+}
+.participant-error {
+  margin-top: -14px;
 }
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+.calendar-event-form > .dialog-actions .primary-button {
+  min-width: 132px;
 }
 .dialog-actions.vertical {
   display: grid;
@@ -476,6 +569,10 @@
   .form-row {
     flex-direction: column;
     align-items: stretch;
+  }
+  .date-time-groups,
+  .date-time-group {
+    grid-template-columns: 1fr;
   }
   .participant-picker {
     grid-template-columns: 1fr;
