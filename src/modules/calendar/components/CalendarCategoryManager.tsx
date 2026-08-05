@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { CalendarCategory } from '../types/calendar-category'
 import { saveCalendarCategory } from '../services/calendar-category.service'
+import { useUnsavedChanges } from '@/modules/pwa/hooks/useUnsavedChanges'
 
 export function CalendarCategoryManager({ categories }: { categories: CalendarCategory[] }) {
   const queryClient = useQueryClient()
@@ -9,11 +10,14 @@ export function CalendarCategoryManager({ categories }: { categories: CalendarCa
   const [color, setColor] = useState('#64748b')
   const [icon, setIcon] = useState('calendar')
   const [editing, setEditing] = useState<CalendarCategory | null>(null)
+  const [dirty, setDirty] = useState(false)
+  useUnsavedChanges(dirty)
   const reset = () => {
     setName('')
     setColor('#64748b')
     setIcon('calendar')
     setEditing(null)
+    setDirty(false)
   }
   const mutation = useMutation({
     mutationFn: saveCalendarCategory,
@@ -42,7 +46,12 @@ export function CalendarCategoryManager({ categories }: { categories: CalendarCa
   return (
     <section className="category-manager">
       <h2>Kategorier</h2>
-      <form onSubmit={submit} className="form-row">
+      <form
+        onSubmit={submit}
+        onChangeCapture={() => setDirty(true)}
+        onReset={() => setDirty(false)}
+        className="form-row"
+      >
         <label>
           Namn
           <input required maxLength={50} value={name} onChange={(e) => setName(e.target.value)} />

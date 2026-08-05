@@ -13,6 +13,7 @@ import { CALENDAR_TIME_ZONE, stockholmLocalToIso, toDateKey } from '../utils/cal
 import { validateCalendarEvent, type CalendarValidationErrors } from '../utils/calendar-validation'
 import { validateParticipantPermission } from '../utils/calendar-permissions'
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
+import { useUnsavedChanges } from '@/modules/pwa/hooks/useUnsavedChanges'
 import { CalendarParticipantPicker } from './CalendarParticipantPicker'
 import { CalendarCategoryPicker } from './CalendarCategoryPicker'
 import { CalendarRecurrenceForm } from './CalendarRecurrenceForm'
@@ -80,6 +81,7 @@ export function CalendarEventForm({
   const [externalSource, setExternalSource] = useState(event?.externalSource ?? '')
   const [externalId, setExternalId] = useState(event?.externalId ?? '')
   const [errors, setErrors] = useState<CalendarValidationErrors & { permission?: string }>({})
+  const [dirty, setDirty] = useState(false)
   const descriptionRef = useAutoResizeTextarea(description)
   const titleId = useId()
   const descriptionId = useId()
@@ -94,6 +96,7 @@ export function CalendarEventForm({
   const endErrorId = `${endDateId}-error`
   const participantErrorId = `${allDayId}-participant-error`
   const permissionErrorId = `${allDayId}-permission-error`
+  useUnsavedChanges(dirty)
 
   function submit(formEvent: FormEvent) {
     formEvent.preventDefault()
@@ -127,7 +130,13 @@ export function CalendarEventForm({
   }
 
   return (
-    <form className="calendar-event-form" onSubmit={submit} noValidate>
+    <form
+      className="calendar-event-form"
+      onSubmit={submit}
+      onChangeCapture={() => setDirty(true)}
+      onReset={() => setDirty(false)}
+      noValidate
+    >
       <div className="form-field">
         <label htmlFor={titleId}>Titel *</label>
         <input
@@ -312,7 +321,14 @@ export function CalendarEventForm({
         <textarea maxLength={5000} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
       <div className="dialog-actions">
-        <button type="button" className="secondary-button" onClick={onCancel}>
+        <button
+          type="button"
+          className="secondary-button"
+          onClick={() => {
+            setDirty(false)
+            onCancel()
+          }}
+        >
           Avbryt
         </button>
         <button type="submit" className="primary-button" disabled={busy}>

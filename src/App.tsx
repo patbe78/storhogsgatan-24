@@ -1,11 +1,16 @@
+import { lazy } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { LazyRoute } from '@/shared/components/LazyRoute'
 import { AppShell } from '@/shared/layouts/AppShell'
 import { AuthProvider, LoginPage, ProtectedRoute, ResetPasswordPage } from '@/modules/auth'
 import { DashboardPage } from '@/modules/dashboard'
 import { CalendarPage } from '@/modules/calendar'
 import { LaundryPage } from '@/modules/laundry'
 import { ShoppingPage } from '@/modules/shopping'
-import { SettingsPage } from '@/modules/settings'
+
+const SettingsPage = lazy(() =>
+  import('@/modules/settings').then((module) => ({ default: module.SettingsPage }))
+)
 
 export function App() {
   return (
@@ -20,7 +25,14 @@ export function App() {
               <Route path="kalender" element={<CalendarPage />} />
               <Route path="tvattbokning" element={<LaundryPage />} />
               <Route path="inkopslista" element={<ShoppingPage />} />
-              <Route path="installningar" element={<SettingsPage />} />
+              <Route
+                path="installningar"
+                element={
+                  <LazyRoute>
+                    <SettingsPage />
+                  </LazyRoute>
+                }
+              />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />

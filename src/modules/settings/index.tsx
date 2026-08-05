@@ -1,8 +1,14 @@
+import { PwaStatusPanel } from '@/modules/pwa'
+
 export function SettingsPage() {
   return (
-    <section className="placeholder">
-      <h1>Inställningar</h1>
-      <p>Inställningar konfigureras i en kommande sprint.</p>
-    </section>
+    <div className="settings-page">
+      <header className="page-heading">
+        <p className="eyebrow">Inställningar</p>
+        <h1>Inställningar</h1>
+        <p>Anpassa hur Storhogsgatan 24 fungerar på den här enheten.</p>
+      </header>
+      <PwaStatusPanel />
+    </div>
   )
 }

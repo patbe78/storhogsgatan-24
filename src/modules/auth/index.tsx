@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
+import { AppIcon, InstallAppButton, useUnsavedChanges } from '@/modules/pwa'
 import { supabase } from '@/shared/services/supabase'
 type AuthContextValue = { session: Session | null; loading: boolean; signOut: () => Promise<void> }
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -49,7 +50,9 @@ export function ProtectedRoute() {
 }
 export function LoginPage() {
   const [message, setMessage] = useState('')
+  const [dirty, setDirty] = useState(false)
   const navigate = useNavigate()
+  useUnsavedChanges(dirty)
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const data = new FormData(event.currentTarget)
@@ -64,24 +67,32 @@ export function LoginPage() {
     if (error) {
       setMessage(error.message)
     } else {
+      setDirty(false)
       navigate('/', { replace: true })
     }
   }
   return (
     <main className="auth-page">
-      <form className="auth-card" onSubmit={submit}>
+      <form
+        className="auth-card"
+        onSubmit={submit}
+        onChangeCapture={() => setDirty(true)}
+        onReset={() => setDirty(false)}
+      >
+        <AppIcon />
         <p className="eyebrow">Storhogsgatan 24</p>
         <h1>Välkommen hem</h1>
-        <p>Logga in för att fortsätta.</p>
+        <p>Familjens kalender och vardag på ett ställe.</p>
         <label>
           E-post
-          <input required name="email" type="email" />
+          <input required name="email" type="email" autoComplete="email" />
         </label>
         <label>
           Lösenord
-          <input required name="password" type="password" />
+          <input required name="password" type="password" autoComplete="current-password" />
         </label>
         <button type="submit">Logga in</button>
+        <InstallAppButton />
         <a href="/aterstall-losenord">Glömt lösenordet?</a>
         {message && <p role="alert">{message}</p>}
       </form>
