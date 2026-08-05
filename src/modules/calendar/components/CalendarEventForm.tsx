@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { formatInTimeZone } from 'date-fns-tz'
 import type { CalendarCategory } from '../types/calendar-category'
 import type {
@@ -12,6 +12,7 @@ import type { CalendarPermissions } from '../types/calendar-permissions'
 import { CALENDAR_TIME_ZONE, stockholmLocalToIso, toDateKey } from '../utils/calendar-dates'
 import { validateCalendarEvent, type CalendarValidationErrors } from '../utils/calendar-validation'
 import { validateParticipantPermission } from '../utils/calendar-permissions'
+import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea'
 import { CalendarParticipantPicker } from './CalendarParticipantPicker'
 import { CalendarCategoryPicker } from './CalendarCategoryPicker'
 import { CalendarRecurrenceForm } from './CalendarRecurrenceForm'
@@ -79,6 +80,20 @@ export function CalendarEventForm({
   const [externalSource, setExternalSource] = useState(event?.externalSource ?? '')
   const [externalId, setExternalId] = useState(event?.externalId ?? '')
   const [errors, setErrors] = useState<CalendarValidationErrors & { permission?: string }>({})
+  const descriptionRef = useAutoResizeTextarea(description)
+  const titleId = useId()
+  const descriptionId = useId()
+  const allDayId = useId()
+  const startDateId = useId()
+  const startTimeId = useId()
+  const endDateId = useId()
+  const endTimeId = useId()
+  const titleErrorId = `${titleId}-error`
+  const descriptionErrorId = `${descriptionId}-error`
+  const startErrorId = `${startDateId}-error`
+  const endErrorId = `${endDateId}-error`
+  const participantErrorId = `${allDayId}-participant-error`
+  const permissionErrorId = `${allDayId}-permission-error`
 
   function submit(formEvent: FormEvent) {
     formEvent.preventDefault()
@@ -113,71 +128,150 @@ export function CalendarEventForm({
 
   return (
     <form className="calendar-event-form" onSubmit={submit} noValidate>
-      <label>
-        Titel *
+      <div className="form-field">
+        <label htmlFor={titleId}>Titel *</label>
         <input
+          id={titleId}
+          autoFocus
+          data-calendar-dialog-initial-focus
           maxLength={150}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           aria-invalid={Boolean(errors.title)}
+          aria-describedby={errors.title ? titleErrorId : undefined}
         />
-        {errors.title && <span className="field-error">{errors.title}</span>}
-      </label>
-      <label>
-        Beskrivning *
+        {errors.title && (
+          <span id={titleErrorId} className="field-error">
+            {errors.title}
+          </span>
+        )}
+      </div>
+      <div className="form-field">
+        <label htmlFor={descriptionId}>Beskrivning</label>
         <textarea
+          ref={descriptionRef}
+          id={descriptionId}
+          className="calendar-description-textarea"
+          rows={2}
           maxLength={2000}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           aria-invalid={Boolean(errors.description)}
+          aria-describedby={errors.description ? descriptionErrorId : undefined}
         />
-        {errors.description && <span className="field-error">{errors.description}</span>}
-      </label>
-      <label>
-        <input
-          type="checkbox"
-          checked={allDay}
-          onChange={(e) => {
-            setAllDay(e.target.checked)
-            setReminder('none')
-          }}
-        />{' '}
-        Heldagsaktivitet
-      </label>
-      <div className="form-row">
-        <label>
-          Startdatum *
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        </label>
-        {!allDay && (
-          <label>
-            Starttid *
-            <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-          </label>
-        )}
-        <label>
-          Slutdatum *
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-          {errors.allDayEnd && <span className="field-error">{errors.allDayEnd}</span>}
-        </label>
-        {!allDay && (
-          <label>
-            Sluttid *
-            <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-            {errors.endsAt && <span className="field-error">{errors.endsAt}</span>}
-          </label>
+        {errors.description && (
+          <span id={descriptionErrorId} className="field-error">
+            {errors.description}
+          </span>
         )}
       </div>
+      <section className="calendar-form-section" aria-labelledby={`${allDayId}-section-title`}>
+        <h3 id={`${allDayId}-section-title`}>Datum och tid</h3>
+        <label className="calendar-checkbox-row all-day-toggle" htmlFor={allDayId}>
+          <input
+            id={allDayId}
+            type="checkbox"
+            checked={allDay}
+            onChange={(e) => {
+              setAllDay(e.target.checked)
+              setReminder('none')
+            }}
+          />
+          <span>Heldagsaktivitet</span>
+        </label>
+        <div className="date-time-groups">
+          <fieldset className="date-time-group">
+            <legend>Start</legend>
+            <div className="form-field">
+              <label htmlFor={startDateId}>Datum *</label>
+              <input
+                id={startDateId}
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                aria-invalid={Boolean(errors.allDayStart || errors.startsAt)}
+                aria-describedby={errors.allDayStart || errors.startsAt ? startErrorId : undefined}
+              />
+            </div>
+            {!allDay && (
+              <div className="form-field">
+                <label htmlFor={startTimeId}>Tid *</label>
+                <input
+                  id={startTimeId}
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  aria-invalid={Boolean(errors.startsAt)}
+                  aria-describedby={errors.startsAt ? startErrorId : undefined}
+                />
+              </div>
+            )}
+            {(errors.allDayStart || errors.startsAt) && (
+              <span id={startErrorId} className="field-error">
+                {errors.allDayStart || errors.startsAt}
+              </span>
+            )}
+          </fieldset>
+          <fieldset className="date-time-group">
+            <legend>Slut</legend>
+            <div className="form-field">
+              <label htmlFor={endDateId}>Datum *</label>
+              <input
+                id={endDateId}
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                aria-invalid={Boolean(errors.allDayEnd || errors.endsAt)}
+                aria-describedby={errors.allDayEnd || errors.endsAt ? endErrorId : undefined}
+              />
+            </div>
+            {!allDay && (
+              <div className="form-field">
+                <label htmlFor={endTimeId}>Tid *</label>
+                <input
+                  id={endTimeId}
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  aria-invalid={Boolean(errors.endsAt)}
+                  aria-describedby={errors.endsAt ? endErrorId : undefined}
+                />
+              </div>
+            )}
+            {(errors.allDayEnd || errors.endsAt) && (
+              <span id={endErrorId} className="field-error">
+                {errors.allDayEnd || errors.endsAt}
+              </span>
+            )}
+          </fieldset>
+        </div>
+      </section>
       <CalendarParticipantPicker
         profiles={profiles}
         selected={participants}
         family={family}
         allowFamily={permissions.canCreateFamilyEvent}
+        describedBy={
+          [
+            errors.participantIds ? participantErrorId : '',
+            errors.permission ? permissionErrorId : ''
+          ]
+            .filter(Boolean)
+            .join(' ') || undefined
+        }
         onSelected={setParticipants}
         onFamily={setFamily}
       />
-      {errors.participantIds && <span className="field-error">{errors.participantIds}</span>}
-      {errors.permission && <span className="field-error">{errors.permission}</span>}
+      {errors.participantIds && (
+        <span id={participantErrorId} className="field-error participant-error">
+          {errors.participantIds}
+        </span>
+      )}
+      {errors.permission && (
+        <span id={permissionErrorId} className="field-error participant-error">
+          {errors.permission}
+        </span>
+      )}
       <div className="form-row">
         <label>
           Plats
@@ -222,7 +316,7 @@ export function CalendarEventForm({
           Avbryt
         </button>
         <button type="submit" className="primary-button" disabled={busy}>
-          {busy ? 'Sparar…' : 'Spara'}
+          {busy ? 'Sparar…' : event ? 'Spara' : 'Skapa aktivitet'}
         </button>
       </div>
     </form>

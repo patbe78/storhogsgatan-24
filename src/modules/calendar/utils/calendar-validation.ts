@@ -8,8 +8,7 @@ export function validateCalendarEvent(input: CalendarEventInput): CalendarValida
   const errors: CalendarValidationErrors = {}
   if (!input.title.trim()) errors.title = 'Ange en titel.'
   else if (input.title.length > 150) errors.title = 'Titeln får vara högst 150 tecken.'
-  if (!input.description.trim()) errors.description = 'Ange en beskrivning.'
-  else if (input.description.length > 2000)
+  if (input.description.trim().length > 2000)
     errors.description = 'Beskrivningen får vara högst 2 000 tecken.'
   if ((input.location?.length ?? 0) > 250) errors.location = 'Platsen får vara högst 250 tecken.'
   if ((input.notes?.length ?? 0) > 5000) errors.notes = 'Anteckningen får vara högst 5 000 tecken.'

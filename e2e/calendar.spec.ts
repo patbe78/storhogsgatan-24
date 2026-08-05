@@ -10,10 +10,32 @@ test('auth, session, navigation och kalenderformulär fungerar med isolerad Supa
   await page.getByRole('main').getByRole('link', { name: 'Kalender' }).click()
   await expect(page.getByRole('button', { name: 'Månad' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: /Ny aktivitet/ }).click()
-  await expect(page.getByRole('dialog', { name: 'Ny aktivitet' })).toBeVisible()
+  const dialog = page.getByRole('dialog', { name: 'Ny aktivitet' })
+  const title = page.getByLabel('Titel *')
+  const description = page.getByLabel('Beskrivning', { exact: true })
+  await expect(dialog).toBeVisible()
+  await expect(title).toBeFocused()
+  await expect(description).not.toHaveAttribute('required', '')
+  await expect(description).toHaveAttribute('rows', '2')
+  await expect(dialog.getByRole('group', { name: 'Start' })).toBeVisible()
+  await expect(dialog.getByRole('group', { name: 'Slut' })).toBeVisible()
+  await expect(dialog.getByLabel('Hela familjen')).toBeVisible()
+
+  const initialDescriptionHeight = await description.evaluate((element) => element.clientHeight)
+  await description.fill(Array.from({ length: 20 }, (_, index) => `Rad ${index + 1}`).join('\n'))
+  const expandedDescriptionHeight = await description.evaluate((element) => element.clientHeight)
+  expect(expandedDescriptionHeight).toBeGreaterThan(initialDescriptionHeight)
+  expect(expandedDescriptionHeight).toBeLessThanOrEqual(180)
+
   await page.getByLabel('Heldagsaktivitet').check()
   await expect(page.getByLabel('Påminnelse')).toHaveValue('none')
-  await expect(page.getByLabel('Starttid *')).toHaveCount(0)
+  await expect(dialog.locator('input[type="time"]')).toHaveCount(0)
+  await expect
+    .poll(() => dialog.evaluate((element) => element.scrollWidth <= element.clientWidth))
+    .toBe(true)
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
 })
 
 test('logout och protected route fungerar', async ({ page }) => {

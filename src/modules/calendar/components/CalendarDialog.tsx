@@ -15,7 +15,12 @@ export function CalendarDialog({
   const closeRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
   useEffect(() => {
-    if (open) closeRef.current?.focus()
+    if (!open) return
+    const initialFocus = dialogRef.current?.querySelector<HTMLElement>(
+      '[data-calendar-dialog-initial-focus]'
+    )
+    const focusTarget = initialFocus ?? closeRef.current
+    focusTarget?.focus()
   }, [open])
   if (!open) return null
   function handleKeyDown(event: React.KeyboardEvent) {

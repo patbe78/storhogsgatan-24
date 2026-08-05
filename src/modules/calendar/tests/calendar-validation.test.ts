@@ -13,14 +13,23 @@ const valid: CalendarEventInput = {
 }
 describe('calendar validation', () => {
   it('accepterar giltig aktivitet', () => expect(validateCalendarEvent(valid)).toEqual({}))
-  it('kräver titel, beskrivning och deltagare', () =>
-    expect(
-      validateCalendarEvent({ ...valid, title: '', description: '', participantIds: [] })
-    ).toMatchObject({
+  it('kräver titel och deltagare men tillåter tom beskrivning', () => {
+    const errors = validateCalendarEvent({
+      ...valid,
+      title: '',
+      description: '',
+      participantIds: []
+    })
+    expect(errors).toMatchObject({
       title: expect.any(String),
-      description: expect.any(String),
       participantIds: expect.any(String)
-    }))
+    })
+    expect(errors).not.toHaveProperty('description')
+  })
+  it('nekar beskrivning över 2 000 tecken', () =>
+    expect(validateCalendarEvent({ ...valid, description: 'x'.repeat(2001) })).toHaveProperty(
+      'description'
+    ))
   it('kräver slut efter start', () =>
     expect(validateCalendarEvent({ ...valid, endsAt: valid.startsAt })).toHaveProperty('endsAt'))
   it('kräver giltigt heldagsintervall', () =>
