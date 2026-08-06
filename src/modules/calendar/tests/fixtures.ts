@@ -10,6 +10,9 @@ export const patrik: Profile = {
   avatar_url: null,
   color: '#2563eb',
   household_id: householdId,
+  is_active: true,
+  deactivated_at: null,
+  deactivated_by: null,
   created_at: '',
   updated_at: ''
 }
@@ -21,6 +24,9 @@ export const felix: Profile = {
   avatar_url: null,
   color: '#16a34a',
   household_id: householdId,
+  is_active: true,
+  deactivated_at: null,
+  deactivated_by: null,
   created_at: '',
   updated_at: ''
 }

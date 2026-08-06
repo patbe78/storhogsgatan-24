@@ -1,0 +1,9 @@
+.invitation-accept-page .auth-card form {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.invitation-accept-page .auth-card {
+  width: min(100% - 2rem, 32rem);
+}

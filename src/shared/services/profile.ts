@@ -2,7 +2,7 @@ import { supabase } from './supabase'
 import type { Profile } from '@/shared/types/profile'
 
 export type ProfileUpdate = Pick<Profile, 'id'> &
-  Partial<Pick<Profile, 'name' | 'email' | 'avatar_url' | 'color'>>
+  Partial<Pick<Profile, 'name' | 'email' | 'avatar_url'>>
 
 export async function getCurrentProfile(): Promise<Profile | null> {
   if (!supabase) return null

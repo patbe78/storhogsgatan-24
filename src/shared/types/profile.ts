@@ -6,6 +6,9 @@ export interface Profile {
   avatar_url: string | null
   color: string | null
   household_id: string | null
+  is_active: boolean
+  deactivated_at: string | null
+  deactivated_by: string | null
   created_at: string
   updated_at: string
 }

@@ -125,12 +125,7 @@ export async function deleteCalendarEvent(
 }
 
 export async function getCalendarProfiles(): Promise<CalendarEventParticipant[]> {
-  const { data, error } = await requireClient()
-    .from('profiles')
-    .select('id,name,color')
-    .not('household_id', 'is', null)
-    .neq('role', 'guest')
-    .order('name')
+  const { data, error } = await requireClient().rpc('calendar_list_active_profiles')
   if (error) throw error
   return (data ?? []) as CalendarEventParticipant[]
 }
