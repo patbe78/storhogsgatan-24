@@ -2,6 +2,23 @@
 
 Ingen av följande åtgärder ska köras mot produktion innan separat granskning och godkännande.
 
+## Produktionsstatus – Sprint 4B
+
+Sprint 4B är produktionssatt, verifierad och accepterad.
+
+- Samtliga fem Sprint 4B-migrationer är körda.
+- `create-family-invitation` är deployad.
+- `accept-family-invitation` är deployad med `--no-verify-jwt`.
+- `RESEND_API_KEY`, `APP_BASE_URL` och `FAMILY_INVITE_FROM` är konfigurerade som Edge Function-secrets.
+- Medlemslista, avaktivering, återaktivering och auditlogg är verifierade.
+- Inbjudningar kan skapas och återkallas.
+- Sista-admin-skydd och backendbehörigheter är verifierade.
+- Patrik och Felix är fortsatt aktiva.
+- En testmedlem har skapats, avaktiverats och återaktiverats.
+
+Den kända begränsningen för extern e-postleverans beskrivs i
+[`family-operations.md`](family-operations.md).
+
 ## Förutsättningar
 
 - Supabase CLI och Docker för lokal miljö, alternativt separat testprojekt.

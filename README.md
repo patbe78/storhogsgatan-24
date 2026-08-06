@@ -4,7 +4,7 @@ Dokumentation för familjeadministration och inbjudningar:
 
 - [Arkitektur och säkerhet](docs/family-architecture.md)
 - [Deploy och secrets](docs/family-deployment.md)
-- [Drift och Åsas inbjudningsflöde](docs/family-operations.md)
+- [Drift och aktuell leveransbegränsning](docs/family-operations.md)
 - [Manuell testplan](docs/family-manual-test.md)
 - [Rollback](docs/family-rollback.md)
 
