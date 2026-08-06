@@ -4,6 +4,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { OnboardingDialog } from '@/modules/pwa'
 import { navigationItems } from '@/shared/components/navigation'
 import { useAuth } from '@/modules/auth'
+import { MembershipGate } from '@/modules/family'
 export function AppShell() {
   const [open, setOpen] = useState(false)
   const { signOut } = useAuth()
@@ -43,7 +44,9 @@ export function AppShell() {
         <button className="backdrop" aria-label="Stäng meny" onClick={() => setOpen(false)} />
       )}
       <main className="content">
-        <Outlet />
+        <MembershipGate>
+          <Outlet />
+        </MembershipGate>
       </main>
       <OnboardingDialog />
     </div>

@@ -1,0 +1,120 @@
+.family-panel {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+.family-panel > section,
+.family-form {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid #dbe4ea;
+  border-radius: 1rem;
+  background: white;
+}
+.family-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.family-form label,
+.family-actions label {
+  display: grid;
+  gap: 0.35rem;
+}
+.family-list {
+  display: grid;
+  gap: 0.75rem;
+}
+.family-row {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) minmax(16rem, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+}
+.family-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.family-identity div {
+  display: grid;
+  min-width: 0;
+}
+.family-identity span:not(.family-color) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #475569;
+}
+.family-color {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  flex: 0 0 auto;
+}
+.family-meta {
+  display: flex;
+  gap: 1rem;
+  margin: 0;
+}
+.family-meta div {
+  display: grid;
+}
+.family-meta dt {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+.family-meta dd {
+  margin: 0;
+}
+.family-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.family-actions input[type='color'] {
+  width: 2.75rem;
+  min-height: 2.5rem;
+  padding: 0.2rem;
+}
+.audit-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+.audit-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.audit-list time {
+  color: #64748b;
+  white-space: nowrap;
+}
+.family-message {
+  margin: 0;
+}
+.membership-inactive {
+  max-width: 38rem;
+  margin: 3rem auto;
+  padding: 2rem;
+  text-align: center;
+}
+@media (max-width: 760px) {
+  .family-form-grid,
+  .family-row {
+    grid-template-columns: 1fr;
+  }
+  .family-meta,
+  .family-actions {
+    flex-wrap: wrap;
+  }
+  .audit-list li {
+    display: grid;
+  }
+}

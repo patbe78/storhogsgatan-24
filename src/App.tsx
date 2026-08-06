@@ -11,6 +11,11 @@ import { ShoppingPage } from '@/modules/shopping'
 const SettingsPage = lazy(() =>
   import('@/modules/settings').then((module) => ({ default: module.SettingsPage }))
 )
+const AcceptInvitationPage = lazy(() =>
+  import('@/modules/invitations').then((module) => ({
+    default: module.AcceptInvitationPage
+  }))
+)
 
 export function App() {
   return (
@@ -19,6 +24,14 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/aterstall-losenord" element={<ResetPasswordPage />} />
+          <Route
+            path="/acceptera-inbjudan"
+            element={
+              <LazyRoute>
+                <AcceptInvitationPage />
+              </LazyRoute>
+            }
+          />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>
               <Route index element={<DashboardPage />} />

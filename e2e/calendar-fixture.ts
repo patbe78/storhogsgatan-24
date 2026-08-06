@@ -15,7 +15,10 @@ const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('b
 const jwt = () =>
   `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: userId, role: 'authenticated', aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 3600 })}.`
 
-export async function mockSupabase(page: Page) {
+export async function mockSupabase(
+  page: Page,
+  profileOptions: { role?: 'admin' | 'adult' | 'member' | 'guest'; isActive?: boolean } = {}
+) {
   await page.route('**/auth/v1/**', async (route) => {
     const url = route.request().url()
     if (url.includes('/token'))
@@ -41,10 +44,13 @@ export async function mockSupabase(page: Page) {
         id: userId,
         name: 'Patrik',
         email: user.email,
-        role: 'admin',
+        role: profileOptions.role ?? 'admin',
         avatar_url: null,
         color: '#2563eb',
         household_id: householdId,
+        is_active: profileOptions.isActive ?? true,
+        deactivated_at: profileOptions.isActive === false ? '2026-08-06T00:00:00Z' : null,
+        deactivated_by: profileOptions.isActive === false ? userId : null,
         created_at: '',
         updated_at: ''
       }
@@ -58,8 +64,11 @@ export async function mockSupabase(page: Page) {
   })
 }
 
-export async function login(page: Page) {
-  await mockSupabase(page)
+export async function login(
+  page: Page,
+  profileOptions: { role?: 'admin' | 'adult' | 'member' | 'guest'; isActive?: boolean } = {}
+) {
+  await mockSupabase(page, profileOptions)
   await page.goto('/login')
   await page.getByLabel('E-post').fill('patrik@test.invalid')
   await page.getByLabel('Lösenord').fill('testlösenord')

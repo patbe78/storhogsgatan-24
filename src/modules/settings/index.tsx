@@ -1,4 +1,5 @@
 import { PwaStatusPanel } from '@/modules/pwa'
+import { FamilyAdministration } from '@/modules/family'
 
 export function SettingsPage() {
   return (
@@ -8,6 +9,7 @@ export function SettingsPage() {
         <h1>Inställningar</h1>
         <p>Anpassa hur Storhogsgatan 24 fungerar på den här enheten.</p>
       </header>
+      <FamilyAdministration />
       <PwaStatusPanel />
     </div>
   )

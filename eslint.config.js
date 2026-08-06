@@ -18,5 +18,9 @@ export default tseslint.config(
       'react-refresh/only-export-components': 'off'
     }
   },
+  {
+    files: ['supabase/functions/**/*.ts', 'supabase/tests/**/*.ts'],
+    languageOptions: { globals: { ...globals.deno } }
+  },
   prettier
 )
