@@ -1,6 +1,46 @@
 -- Kör endast mot lokal/test-Supabase efter Sprint 4C-migrationerna. All testdata rullas tillbaka.
 begin;
 
+-- The correction migration gives the existing deduplication constraint and
+-- its backing unique index a stable name without changing its columns.
+do $$ begin
+  if not exists (
+    select 1
+    from pg_catalog.pg_constraint constraint_record
+    join pg_catalog.pg_class constraint_index
+      on constraint_index.oid = constraint_record.conindid
+    where constraint_record.conrelid = 'public.calendar_push_deliveries'::regclass
+      and constraint_record.conname = 'calendar_push_deliveries_dedup_key'
+      and constraint_record.contype = 'u'
+      and constraint_index.relname = 'calendar_push_deliveries_dedup_key'
+      and array(
+        select attribute.attname::text
+        from unnest(constraint_record.conkey) with ordinality as key_column(attnum, position)
+        join pg_catalog.pg_attribute attribute
+          on attribute.attrelid = constraint_record.conrelid
+          and attribute.attnum = key_column.attnum
+        order by key_column.position
+      ) = array[
+        'reminder_id',
+        'occurrence_starts_at',
+        'profile_id',
+        'subscription_id'
+      ]
+  ) then raise exception 'TEST_FAILED_DELIVERY_DEDUP_CONSTRAINT'; end if;
+end $$;
+
+-- An empty claim still parses and executes every PL/pgSQL statement, so this
+-- catches output/column ambiguities even before candidate data exists.
+update public.calendar_push_dispatch_state
+set last_scanned_at = '2025-12-31T21:59:00Z';
+create temporary table empty_claim as
+select * from public.calendar_claim_due_push_deliveries('2025-12-31T22:00:00Z');
+do $$ begin
+  if (select count(*) <> 0 from empty_claim) then
+    raise exception 'TEST_FAILED_EMPTY_CLAIM';
+  end if;
+end $$;
+
 insert into auth.users (
   id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -84,16 +124,38 @@ end $$;
 reset role;
 update public.calendar_push_dispatch_state set last_scanned_at = '2026-03-29T06:59:00Z';
 
--- Båda enheterna claimas, icke-deltagaren inte, och upprepad körning ger ingen dublett.
+-- Båda enheterna claimas, occurrence returneras entydigt, icke-deltagaren
+-- exkluderas och upprepad körning skapar ingen dublett.
 create temporary table first_claim as
 select * from public.calendar_claim_due_push_deliveries('2026-03-29T07:00:00Z');
 do $$ begin
-  if (select count(*) <> 2 from first_claim) then raise exception 'TEST_FAILED_MULTI_DEVICE_CLAIM'; end if;
+  if (select count(*) <> 2 from first_claim) then
+    raise exception 'TEST_FAILED_CANDIDATE_MULTI_DEVICE_CLAIM';
+  end if;
+  if exists (
+    select 1 from first_claim
+    where occurrence_starts_at <> '2026-03-29T07:15:00Z'::timestamptz
+  ) then raise exception 'TEST_FAILED_OCCURRENCE_STARTS_AT'; end if;
   if exists (select 1 from first_claim where title <> 'Två reminders') then
     raise exception 'TEST_FAILED_UNSAFE_TITLE';
   end if;
   if (select count(*) <> 0 from public.calendar_claim_due_push_deliveries('2026-03-29T07:00:00Z')) then
-    raise exception 'TEST_FAILED_DUPLICATE_CLAIM';
+    raise exception 'TEST_FAILED_REPEATED_CLAIM';
+  end if;
+  if (
+    select count(*)
+    from public.calendar_push_deliveries delivery
+    where delivery.id = any (select claimed.delivery_id from first_claim claimed)
+  ) <> 2 then
+    raise exception 'TEST_FAILED_REPEATED_CLAIM_DUPLICATE_DELIVERY';
+  end if;
+  if (
+    select count(*)
+    from public.calendar_push_deliveries delivery
+    where delivery.occurrence_starts_at = '2026-03-29T07:15:00Z'::timestamptz
+      and delivery.profile_id = 'd1000000-0000-4000-8000-000000000001'
+  ) <> 2 then
+    raise exception 'TEST_FAILED_DELIVERY_DEDUPLICATION';
   end if;
 end $$;
 
@@ -160,13 +222,21 @@ values (
   '24000000-0000-4000-8000-000000000024'
 );
 
--- Funktionskontraktet innehåller både seriell dispatch-låsning och SKIP LOCKED-claim.
-do $$ begin
-  if position(
-    'FOR UPDATE SKIP LOCKED' in upper(pg_get_functiondef(
-      'public.calendar_claim_due_push_deliveries(timestamptz)'::regprocedure
-    ))
-  ) = 0 then raise exception 'TEST_FAILED_PARALLEL_CLAIM_GUARD'; end if;
+-- Funktionskontraktet serialiserar scan-cursorn och använder SKIP LOCKED för
+-- kandidatclaimen. Tillsammans med repeated-claim-testet ovan verifierar detta
+-- att parallella körningar inte kan returnera samma leverans.
+do $$
+declare
+  v_definition text := pg_get_functiondef(
+    'public.calendar_claim_due_push_deliveries(timestamptz)'::regprocedure
+  );
+begin
+  if v_definition !~* 'from[[:space:]]+public\.calendar_push_dispatch_state[[:space:]]+state[[:space:]]+where[[:space:]]+state\.singleton[[:space:]]+for[[:space:]]+update' then
+    raise exception 'TEST_FAILED_PARALLEL_DISPATCH_LOCK';
+  end if;
+  if v_definition !~* 'for[[:space:]]+update[[:space:]]+skip[[:space:]]+locked' then
+    raise exception 'TEST_FAILED_PARALLEL_CLAIM_GUARD';
+  end if;
 end $$;
 
 -- Ett separat gammalt event ger expired, inte utskick.
