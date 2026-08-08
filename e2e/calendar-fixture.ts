@@ -17,7 +17,11 @@ const jwt = () =>
 
 export async function mockSupabase(
   page: Page,
-  profileOptions: { role?: 'admin' | 'adult' | 'member' | 'guest'; isActive?: boolean } = {}
+  profileOptions: {
+    role?: 'admin' | 'adult' | 'member' | 'guest'
+    isActive?: boolean
+    calendarEvents?: unknown[]
+  } = {}
 ) {
   await page.route('**/auth/v1/**', async (route) => {
     const url = route.request().url()
@@ -37,8 +41,9 @@ export async function mockSupabase(
   await page.route('**/rest/v1/**', async (route) => {
     const request = route.request()
     const url = request.url()
-    if (url.includes('/rpc/calendar_events_in_range') || url.includes('/calendar_categories'))
-      return route.fulfill({ json: [] })
+    if (url.includes('/rpc/calendar_events_in_range'))
+      return route.fulfill({ json: profileOptions.calendarEvents ?? [] })
+    if (url.includes('/calendar_categories')) return route.fulfill({ json: [] })
     if (url.includes('/profiles')) {
       const profile = {
         id: userId,
@@ -66,7 +71,11 @@ export async function mockSupabase(
 
 export async function login(
   page: Page,
-  profileOptions: { role?: 'admin' | 'adult' | 'member' | 'guest'; isActive?: boolean } = {}
+  profileOptions: {
+    role?: 'admin' | 'adult' | 'member' | 'guest'
+    isActive?: boolean
+    calendarEvents?: unknown[]
+  } = {}
 ) {
   await mockSupabase(page, profileOptions)
   await page.goto('/login')

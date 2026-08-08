@@ -11,6 +11,9 @@ describe('PWA-konfiguration', () => {
     expect(config).toContain("registerType: 'prompt'")
     expect(config).not.toContain("registerType: 'autoUpdate'")
     expect(config).toContain('runtimeCaching: []')
+    expect(config).toContain("importScripts: ['push-sw.js']")
+    expect(read('public/push-sw.js')).toContain("self.addEventListener('push'")
+    expect(read('public/push-sw.js')).toContain("self.addEventListener('notificationclick'")
   })
 
   it('har viewport safe areas och base-aware PWA-assets', () => {

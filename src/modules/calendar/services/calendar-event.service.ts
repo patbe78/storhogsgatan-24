@@ -25,7 +25,8 @@ interface CalendarRpcRow extends Record<string, unknown> {
   all_day_start: string | null
   all_day_end: string | null
   is_family_event: boolean
-  reminder_type: CalendarEvent['reminderType']
+  reminder_offsets_minutes?: number[]
+  reminder_type?: string
   reminder_offset_minutes: number | null
   external_source: string | null
   external_id: string | null
@@ -65,8 +66,9 @@ function mapRow(row: CalendarRpcRow): CalendarEventWithRule {
     allDayStart: row.all_day_start,
     allDayEnd: row.all_day_end,
     isFamilyEvent: row.is_family_event,
-    reminderType: row.reminder_type,
-    reminderOffsetMinutes: row.reminder_offset_minutes,
+    reminderOffsetsMinutes:
+      row.reminder_offsets_minutes ??
+      legacyReminderOffsets(row.reminder_type, row.reminder_offset_minutes),
     externalSource: row.external_source,
     externalId: row.external_id,
     recurrenceSeriesId: row.recurrence_series_id,
@@ -88,6 +90,19 @@ function mapRow(row: CalendarRpcRow): CalendarEventWithRule {
       }
     : null
   return { event, recurrence }
+}
+
+function legacyReminderOffsets(type?: string, custom?: number | null): number[] {
+  const offsets: Record<string, number> = {
+    at_start: 0,
+    '5_minutes': 5,
+    '15_minutes': 15,
+    '30_minutes': 30,
+    '1_hour': 60,
+    '1_day': 1440
+  }
+  if (type === 'custom' && custom != null) return [custom]
+  return type && offsets[type] != null ? [offsets[type]] : []
 }
 
 export async function getCalendarEvents(

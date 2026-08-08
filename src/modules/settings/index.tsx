@@ -1,5 +1,6 @@
 import { PwaStatusPanel } from '@/modules/pwa'
 import { FamilyAdministration } from '@/modules/family'
+import { PushNotificationPanel } from '@/modules/notifications'
 
 export function SettingsPage() {
   return (
@@ -11,6 +12,7 @@ export function SettingsPage() {
       </header>
       <FamilyAdministration />
       <PwaStatusPanel />
+      <PushNotificationPanel />
     </div>
   )
 }

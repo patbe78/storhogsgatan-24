@@ -9,7 +9,16 @@ import { PwaProvider } from '../PwaProvider'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
-  signInWithPassword: vi.fn()
+  signInWithPassword: vi.fn(),
+  rebind: vi.fn()
+}))
+
+vi.mock('@/modules/notifications', () => ({
+  clearLocalPushBinding: vi.fn(),
+  deactivateCurrentInstallation: vi.fn(),
+  logSanitizedPushCleanupFailure: vi.fn(),
+  rebindExistingPushSubscription: mocks.rebind,
+  unsubscribeCurrentPushSubscription: vi.fn()
 }))
 
 vi.mock('react-router-dom', async (importOriginal) => {
@@ -63,6 +72,7 @@ beforeEach(() => {
   mocks.navigate.mockReset()
   mocks.signInWithPassword.mockReset()
   mocks.signInWithPassword.mockResolvedValue({ error: null })
+  mocks.rebind.mockReset().mockResolvedValue(false)
 })
 
 describe('osparad logininformation', () => {

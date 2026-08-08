@@ -39,7 +39,8 @@ import '../calendar.css'
 type Mode = 'closed' | 'create' | 'details' | 'edit' | 'categories'
 
 export function CalendarPage() {
-  const navigation = useCalendarNavigation()
+  const [params, setParams] = useSearchParams()
+  const navigation = useCalendarNavigation(params.get('date'))
   const filterState = useCalendarFilters()
   const permissions = useCalendarPermissions()
   const profiles = useCalendarProfiles()
@@ -53,7 +54,6 @@ export function CalendarPage() {
   )
   const model = useCalendarViewModel(navigation.view, navigation.anchor, events.data ?? [])
   const mutations = useCalendarMutations()
-  const [params, setParams] = useSearchParams()
   const [mode, setMode] = useState<Mode>('closed')
   const [selected, setSelected] = useState<CalendarViewItem | null>(null)
   const [initialDate, setInitialDate] = useState<string>()
@@ -128,8 +128,7 @@ export function CalendarPage() {
       allDayStart: input.allDayStart ?? null,
       allDayEnd: input.allDayEnd ?? null,
       isFamilyEvent: input.isFamilyEvent,
-      reminderType: input.reminderType,
-      reminderOffsetMinutes: input.reminderOffsetMinutes ?? null,
+      reminderOffsetsMinutes: input.reminderOffsetsMinutes,
       externalSource: input.externalSource ?? null,
       externalId: input.externalId ?? null,
       recurrenceSeriesId: activeSelected?.occurrence.event.recurrenceSeriesId ?? null,

@@ -28,7 +28,10 @@ test('auth, session, navigation och kalenderformulär fungerar med isolerad Supa
   expect(expandedDescriptionHeight).toBeLessThanOrEqual(180)
 
   await page.getByLabel('Heldagsaktivitet').check()
-  await expect(page.getByLabel('Påminnelse')).toHaveValue('none')
+  await page.getByLabel('15 minuter före').check()
+  await page.getByLabel('2 dagar före').check()
+  await expect(page.getByLabel('15 minuter före')).toBeChecked()
+  await expect(page.getByLabel('2 dagar före')).toBeChecked()
   await expect(dialog.locator('input[type="time"]')).toHaveCount(0)
   await expect
     .poll(() => dialog.evaluate((element) => element.scrollWidth <= element.clientWidth))

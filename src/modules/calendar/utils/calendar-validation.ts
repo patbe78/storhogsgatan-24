@@ -13,6 +13,10 @@ export function validateCalendarEvent(input: CalendarEventInput): CalendarValida
   if ((input.location?.length ?? 0) > 250) errors.location = 'Platsen får vara högst 250 tecken.'
   if ((input.notes?.length ?? 0) > 5000) errors.notes = 'Anteckningen får vara högst 5 000 tecken.'
   if (!input.participantIds.length) errors.participantIds = 'Välj minst en deltagare.'
+  if (input.reminderOffsetsMinutes.some((offset) => !Number.isInteger(offset) || offset < 0))
+    errors.reminderOffsetsMinutes = 'Påminnelser måste anges som hela minuter före start.'
+  else if (new Set(input.reminderOffsetsMinutes).size !== input.reminderOffsetsMinutes.length)
+    errors.reminderOffsetsMinutes = 'Samma påminnelse kan bara läggas till en gång.'
   if (input.allDay) {
     if (!input.allDayStart) errors.allDayStart = 'Ange startdatum.'
     if (!input.allDayEnd) errors.allDayEnd = 'Ange slutdatum.'

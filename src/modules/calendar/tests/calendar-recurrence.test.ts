@@ -59,6 +59,30 @@ describe('calendar recurrence', () => {
         rangeEnd
       ).map((item) => item.occurrenceDate)
     ).toEqual(['2026-08-10', '2026-09-10', '2026-10-10', '2026-11-10']))
+  it('matchar sekventiell month-end-clamping i backendkontraktet', () =>
+    expect(
+      generateOccurrences(
+        event({
+          startsAt: '2026-01-31T08:00:00.000Z',
+          endsAt: '2026-01-31T09:00:00.000Z'
+        }),
+        rule({ frequency: 'monthly', startsOn: '2026-01-31', occurrenceCount: 3 }),
+        new Date('2026-01-01T00:00:00Z'),
+        new Date('2026-04-01T00:00:00Z')
+      ).map((item) => item.occurrenceDate)
+    ).toEqual(['2026-01-31', '2026-02-28', '2026-03-28']))
+  it('bevarar Stockholmstid även över återgången till CET', () => {
+    const items = generateOccurrences(
+      event({ startsAt: '2026-10-18T06:00:00Z', endsAt: '2026-10-18T07:00:00Z' }),
+      rule({ frequency: 'weekly', startsOn: '2026-10-18', occurrenceCount: 2 }),
+      new Date('2026-10-17T00:00:00Z'),
+      new Date('2026-10-27T00:00:00Z')
+    )
+    expect(items.map((item) => item.startsAt)).toEqual([
+      '2026-10-18T06:00:00.000Z',
+      '2026-10-25T07:00:00.000Z'
+    ])
+  })
   it('genererar årsvis', () =>
     expect(
       generateOccurrences(

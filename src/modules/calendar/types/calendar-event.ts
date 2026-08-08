@@ -1,6 +1,3 @@
-export type ReminderType =
-  'none' | 'at_start' | '5_minutes' | '15_minutes' | '30_minutes' | '1_hour' | '1_day' | 'custom'
-
 export interface CalendarEventParticipant {
   id: string
   name: string
@@ -25,8 +22,7 @@ export interface CalendarEvent {
   allDayStart: string | null
   allDayEnd: string | null
   isFamilyEvent: boolean
-  reminderType: ReminderType
-  reminderOffsetMinutes: number | null
+  reminderOffsetsMinutes: number[]
   externalSource: string | null
   externalId: string | null
   recurrenceSeriesId: string | null
@@ -48,8 +44,7 @@ export interface CalendarEventInput {
   allDayStart?: string | null
   allDayEnd?: string | null
   isFamilyEvent: boolean
-  reminderType: ReminderType
-  reminderOffsetMinutes?: number | null
+  reminderOffsetsMinutes: number[]
   externalSource?: string
   externalId?: string
   participantIds: string[]
