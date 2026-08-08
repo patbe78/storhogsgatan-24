@@ -4,8 +4,7 @@ import type { CalendarCategory } from '../types/calendar-category'
 import type {
   CalendarEvent,
   CalendarEventInput,
-  CalendarEventParticipant,
-  ReminderType
+  CalendarEventParticipant
 } from '../types/calendar-event'
 import type { CalendarRecurrenceInput, CalendarRecurrenceRule } from '../types/calendar-recurrence'
 import type { CalendarPermissions } from '../types/calendar-permissions'
@@ -64,10 +63,7 @@ export function CalendarEventForm({
     event?.participants.map((person) => person.id) ??
       (permissions.profile ? [permissions.profile.id] : [])
   )
-  const [reminder, setReminder] = useState<ReminderType>(event?.reminderType ?? 'none')
-  const [customMinutes, setCustomMinutes] = useState<number | null>(
-    event?.reminderOffsetMinutes ?? null
-  )
+  const [reminders, setReminders] = useState<number[]>(event?.reminderOffsetsMinutes ?? [])
   const [recurrence, setRecurrence] = useState<CalendarRecurrenceInput | null>(
     initialRecurrence
       ? {
@@ -114,8 +110,7 @@ export function CalendarEventForm({
       endsAt: allDay ? null : stockholmLocalToIso(endDate, endTime),
       isFamilyEvent: family,
       participantIds: participants,
-      reminderType: reminder,
-      reminderOffsetMinutes: customMinutes,
+      reminderOffsetsMinutes: reminders,
       recurrence,
       externalSource,
       externalId
@@ -181,10 +176,7 @@ export function CalendarEventForm({
             id={allDayId}
             type="checkbox"
             checked={allDay}
-            onChange={(e) => {
-              setAllDay(e.target.checked)
-              setReminder('none')
-            }}
+            onChange={(e) => setAllDay(e.target.checked)}
           />
           <span>Heldagsaktivitet</span>
         </label>
@@ -295,14 +287,10 @@ export function CalendarEventForm({
       </div>
       <CalendarRecurrenceForm value={recurrence} onChange={setRecurrence} />
       {errors.recurrence && <span className="field-error">{errors.recurrence}</span>}
-      <CalendarReminderPicker
-        value={reminder}
-        customMinutes={customMinutes}
-        onChange={(type, minutes) => {
-          setReminder(type)
-          setCustomMinutes(minutes)
-        }}
-      />
+      <CalendarReminderPicker value={reminders} onChange={setReminders} />
+      {errors.reminderOffsetsMinutes && (
+        <span className="field-error">{errors.reminderOffsetsMinutes}</span>
+      )}
       <details>
         <summary>Extern referens</summary>
         <div className="form-row">

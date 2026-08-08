@@ -11,7 +11,35 @@ import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { Session } from '@supabase/supabase-js'
 import { AppIcon, InstallAppButton, useUnsavedChanges } from '@/modules/pwa'
 import { supabase } from '@/shared/services/supabase'
+import {
+  clearLocalPushBinding,
+  deactivateCurrentInstallation,
+  logSanitizedPushCleanupFailure,
+  rebindExistingPushSubscription,
+  unsubscribeCurrentPushSubscription
+} from '@/modules/notifications'
 type AuthContextValue = { session: Session | null; loading: boolean; signOut: () => Promise<void> }
+const PUSH_CLEANUP_TIMEOUT_MS = 3000
+
+function boundedPushCleanup<T>(operation: Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = window.setTimeout(
+      () => reject(new Error('push_cleanup_timeout')),
+      PUSH_CLEANUP_TIMEOUT_MS
+    )
+    operation.then(
+      (value) => {
+        window.clearTimeout(timeout)
+        resolve(value)
+      },
+      (error: unknown) => {
+        window.clearTimeout(timeout)
+        reject(error)
+      }
+    )
+  })
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
@@ -21,8 +49,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setLoading(false)
+      if (data.session)
+        void rebindExistingPushSubscription().catch(() =>
+          logSanitizedPushCleanupFailure('initial_rebind')
+        )
     })
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next))
+    const { data: listener } = supabase.auth.onAuthStateChange((event, next) => {
+      setSession(next)
+      if (event === 'SIGNED_IN' && next)
+        void rebindExistingPushSubscription().catch(() =>
+          logSanitizedPushCleanupFailure('signed_in_rebind')
+        )
+    })
     return () => listener.subscription.unsubscribe()
   }, [])
   const value = useMemo(
@@ -30,6 +68,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       loading,
       signOut: async () => {
+        try {
+          await boundedPushCleanup(clearLocalPushBinding())
+        } catch {
+          logSanitizedPushCleanupFailure('local_binding')
+        }
+        const cleanup = await Promise.allSettled([
+          boundedPushCleanup(unsubscribeCurrentPushSubscription()),
+          boundedPushCleanup(deactivateCurrentInstallation())
+        ])
+        if (cleanup[0].status === 'rejected') logSanitizedPushCleanupFailure('local_unsubscribe')
+        if (cleanup[1].status === 'rejected') logSanitizedPushCleanupFailure('server_deactivate')
         await supabase?.auth.signOut()
       }
     }),
@@ -52,6 +101,7 @@ export function LoginPage() {
   const [message, setMessage] = useState('')
   const [dirty, setDirty] = useState(false)
   const navigate = useNavigate()
+  const location = useLocation()
   useUnsavedChanges(dirty)
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -68,7 +118,9 @@ export function LoginPage() {
       setMessage(error.message)
     } else {
       setDirty(false)
-      navigate('/', { replace: true })
+      const from = (location.state as { from?: { pathname?: string; search?: string } } | null)
+        ?.from
+      navigate(from?.pathname ? `${from.pathname}${from.search ?? ''}` : '/', { replace: true })
     }
   }
   return (

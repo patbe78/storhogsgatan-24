@@ -1,8 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2'
+import { readSupabaseAdminKey } from './environment.ts'
 
 export function requiredEnvironment() {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  const serviceRoleKey = readSupabaseAdminKey((name) => Deno.env.get(name))
   const appBaseUrl = Deno.env.get('APP_BASE_URL')
   if (!supabaseUrl || !serviceRoleKey || !appBaseUrl) return null
   return { supabaseUrl, serviceRoleKey, appBaseUrl }

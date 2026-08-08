@@ -6,7 +6,11 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1',
     url: 'http://127.0.0.1:5173',
-    reuseExistingServer: !process.env.CI
+    reuseExistingServer: !process.env.CI,
+    env: {
+      ...process.env,
+      VITE_VAPID_PUBLIC_KEY: process.env.VITE_VAPID_PUBLIC_KEY ?? 'AQAB'
+    }
   },
   projects: [
     {

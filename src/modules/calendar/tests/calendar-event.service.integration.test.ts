@@ -14,7 +14,7 @@ const input: CalendarEventInput = {
   endsAt: '2026-08-10T17:00:00Z',
   allDay: false,
   isFamilyEvent: false,
-  reminderType: 'none',
+  reminderOffsetsMinutes: [],
   participantIds: ['profile-1', 'profile-2']
 }
 

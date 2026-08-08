@@ -75,15 +75,37 @@ describe('CalendarEventForm', () => {
     }
   })
 
-  it('döljer tider för heldag och behåller ingen påminnelse', async () => {
+  it('döljer tider för heldag utan att förstöra valda påminnelser', async () => {
     render(<CalendarEventForm {...props} />)
     const allDay = screen.getByLabelText('Heldagsaktivitet')
     expect(allDay).toHaveAttribute('type', 'checkbox')
     expect(screen.getAllByLabelText('Tid *')).toHaveLength(2)
 
+    await userEvent.click(screen.getByLabelText('15 minuter före'))
     await userEvent.click(allDay)
     expect(screen.queryByLabelText('Tid *')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Påminnelse')).toHaveValue('none')
+    expect(screen.getByLabelText('15 minuter före')).toBeChecked()
+  })
+
+  it('skickar flera unika påminnelser samtidigt', async () => {
+    render(<CalendarEventForm {...props} />)
+    await userEvent.type(screen.getByLabelText('Titel *'), 'Träning')
+    await userEvent.click(screen.getByLabelText('5 minuter före'))
+    await userEvent.click(screen.getByLabelText('2 timmar före'))
+    await userEvent.click(screen.getByRole('button', { name: 'Skapa aktivitet' }))
+
+    expect(props.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ reminderOffsetsMinutes: [5, 120] })
+    )
+  })
+
+  it('bevarar en befintlig anpassad reminder och blockerar dublett', async () => {
+    render(<CalendarEventForm {...props} event={event({ reminderOffsetsMinutes: [17] })} />)
+    expect(screen.getByLabelText('Anpassade påminnelser')).toHaveTextContent('17 minuter före')
+    const input = screen.getByLabelText('Anpassade minuter före')
+    await userEvent.clear(input)
+    await userEvent.type(input, '17')
+    expect(screen.getByRole('button', { name: 'Lägg till påminnelse' })).toBeDisabled()
   })
 
   it('redigerar ett event med tom beskrivning', async () => {

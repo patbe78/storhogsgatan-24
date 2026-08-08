@@ -8,7 +8,7 @@ const valid: CalendarEventInput = {
   endsAt: '2026-08-10T09:00:00Z',
   allDay: false,
   isFamilyEvent: false,
-  reminderType: 'none',
+  reminderOffsetsMinutes: [],
   participantIds: ['1']
 }
 describe('calendar validation', () => {
@@ -55,4 +55,15 @@ describe('calendar validation', () => {
         }
       })
     ).toHaveProperty('recurrence'))
+  it('nekar dubbla och negativa påminnelser', () => {
+    expect(validateCalendarEvent({ ...valid, reminderOffsetsMinutes: [5, 5] })).toHaveProperty(
+      'reminderOffsetsMinutes'
+    )
+    expect(validateCalendarEvent({ ...valid, reminderOffsetsMinutes: [-1] })).toHaveProperty(
+      'reminderOffsetsMinutes'
+    )
+    expect(
+      validateCalendarEvent({ ...valid, reminderOffsetsMinutes: [0, 5, 15, 120, 2880] })
+    ).not.toHaveProperty('reminderOffsetsMinutes')
+  })
 })

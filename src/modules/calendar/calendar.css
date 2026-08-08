@@ -465,6 +465,42 @@
 .dialog-actions .text-button {
   margin: 0;
 }
+
+.calendar-reminder-picker {
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+}
+
+.calendar-reminder-picker > p {
+  margin: 0 0 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.calendar-reminder-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-reminder-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.calendar-custom-reminders {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.calendar-custom-reminders li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
 .event-details p {
   line-height: 1.6;
 }

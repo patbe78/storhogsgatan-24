@@ -46,6 +46,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,
+        importScripts: ['push-sw.js'],
         globPatterns: ['**/*.{js,css,html,woff2}'],
         runtimeCaching: []
       }
