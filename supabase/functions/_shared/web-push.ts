@@ -1,5 +1,3 @@
-import webpush from 'npm:web-push@3.6.7'
-
 export interface CalendarPushDelivery {
   delivery_id: string
   claim_token: string
@@ -18,6 +16,31 @@ export interface CalendarPushDelivery {
 export type PushResult =
   | { status: 'sent'; errorClass: null }
   | { status: 'invalid_subscription' | 'failed'; errorClass: string }
+
+export interface WebPushClient {
+  setVapidDetails(subject: string, publicKey: string, privateKey: string): void
+  sendNotification(
+    subscription: { endpoint: string; keys: { p256dh: string; auth: string } },
+    payload: string,
+    options: { TTL: number; urgency: string }
+  ): Promise<unknown>
+}
+
+let webPushClientPromise: Promise<WebPushClient> | null = null
+
+export function initializeWebPush(): Promise<WebPushClient> {
+  webPushClientPromise ??= import('npm:web-push@3.6.7').then((module) => {
+    const client = (module.default ?? module) as unknown as WebPushClient
+    if (
+      typeof client.setVapidDetails !== 'function' ||
+      typeof client.sendNotification !== 'function'
+    ) {
+      throw new TypeError('web_push_api_invalid')
+    }
+    return client
+  })
+  return webPushClientPromise
+}
 
 export function secureEqual(actual: string | null, expected: string): boolean {
   if (!actual || actual.length !== expected.length) return false
@@ -80,10 +103,12 @@ export function buildCalendarPushPayload(delivery: CalendarPushDelivery): string
 
 export async function sendCalendarPush(
   delivery: CalendarPushDelivery,
-  vapid: { subject: string; publicKey: string; privateKey: string }
+  vapid: { subject: string; publicKey: string; privateKey: string },
+  initializedClient?: WebPushClient
 ): Promise<PushResult> {
-  webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey)
   try {
+    const webpush = initializedClient ?? (await initializeWebPush())
+    webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey)
     await webpush.sendNotification(
       {
         endpoint: delivery.endpoint,
