@@ -1,6 +1,80 @@
 -- Kör endast mot lokal/test-Supabase efter Sprint 4C-migrationerna. All testdata rullas tillbaka.
 begin;
 
+-- Grants ska vara säkra även när Supabase har breda default grants för nya tabeller.
+do $$
+declare
+  v_column text;
+  v_table text;
+  v_role text;
+  v_privilege text;
+begin
+  if has_table_privilege('anon', 'public.push_subscriptions', 'SELECT')
+     or has_any_column_privilege('anon', 'public.push_subscriptions', 'SELECT') then
+    raise exception 'TEST_FAILED_ANON_PUSH_SELECT';
+  end if;
+  if has_table_privilege('authenticated', 'public.push_subscriptions', 'SELECT') then
+    raise exception 'TEST_FAILED_AUTHENTICATED_TABLE_LEVEL_PUSH_SELECT';
+  end if;
+  foreach v_column in array array['installation_id', 'binding_id', 'status'] loop
+    if not has_column_privilege(
+      'authenticated', 'public.push_subscriptions', v_column, 'SELECT'
+    ) then raise exception 'TEST_FAILED_SAFE_PUSH_COLUMN_NOT_READABLE: %', v_column; end if;
+  end loop;
+  foreach v_column in array array[
+    'id', 'profile_id', 'household_id', 'auth_session_id', 'endpoint', 'p256dh',
+    'auth_secret', 'browser_metadata', 'invalidated_at', 'created_at', 'updated_at'
+  ] loop
+    if has_column_privilege(
+      'authenticated', 'public.push_subscriptions', v_column, 'SELECT'
+    ) then raise exception 'TEST_FAILED_SENSITIVE_PUSH_COLUMN_READABLE: %', v_column; end if;
+  end loop;
+
+  if has_any_column_privilege('anon', 'public.calendar_event_reminders', 'SELECT') then
+    raise exception 'TEST_FAILED_ANON_REMINDER_SELECT';
+  end if;
+  if not has_table_privilege(
+    'authenticated', 'public.calendar_event_reminders', 'SELECT'
+  ) then raise exception 'TEST_FAILED_AUTHENTICATED_REMINDER_SELECT'; end if;
+
+  foreach v_table in array array[
+    'calendar_event_reminders', 'push_subscriptions',
+    'calendar_push_deliveries', 'calendar_push_dispatch_state'
+  ] loop
+    foreach v_role in array array['anon', 'authenticated'] loop
+      foreach v_privilege in array array[
+        'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'
+      ] loop
+        if has_table_privilege(v_role, 'public.' || v_table, v_privilege) then
+          raise exception 'TEST_FAILED_CLIENT_TABLE_MUTATION: %.% %',
+            v_role, v_table, v_privilege;
+        end if;
+      end loop;
+    end loop;
+  end loop;
+
+  foreach v_table in array array[
+    'calendar_push_deliveries', 'calendar_push_dispatch_state'
+  ] loop
+    foreach v_role in array array['anon', 'authenticated'] loop
+      if has_any_column_privilege(v_role, 'public.' || v_table, 'SELECT') then
+        raise exception 'TEST_FAILED_SERVER_TABLE_SELECT: %.%', v_role, v_table;
+      end if;
+    end loop;
+  end loop;
+
+  foreach v_table in array array[
+    'calendar_event_reminders', 'push_subscriptions',
+    'calendar_push_deliveries', 'calendar_push_dispatch_state'
+  ] loop
+    foreach v_privilege in array array['SELECT', 'INSERT', 'UPDATE', 'DELETE'] loop
+      if not has_table_privilege('service_role', 'public.' || v_table, v_privilege) then
+        raise exception 'TEST_FAILED_SERVICE_ROLE_ACCESS: % %', v_table, v_privilege;
+      end if;
+    end loop;
+  end loop;
+end $$;
+
 insert into auth.users (
   id, aud, role, email, encrypted_password, email_confirmed_at,
   raw_app_meta_data, raw_user_meta_data, created_at, updated_at
@@ -48,17 +122,26 @@ select public.push_register_subscription(
 );
 
 do $$ begin
-  if (select count(id) <> 1 from public.push_subscriptions) then
+  if (select count(installation_id) <> 1 from public.push_subscriptions) then
     raise exception 'TEST_FAILED_OWNER_CANNOT_READ_SUBSCRIPTION';
   end if;
-  begin
-    perform auth_session_id from public.push_subscriptions limit 1;
-    raise exception 'TEST_FAILED_AUTH_SESSION_ID_EXPOSED';
-  exception when insufficient_privilege then null; end;
-  begin
-    perform endpoint from public.push_subscriptions limit 1;
-    raise exception 'TEST_FAILED_PUSH_CREDENTIALS_EXPOSED';
-  exception when insufficient_privilege then null; end;
+  perform installation_id, binding_id, status from public.push_subscriptions limit 1;
+end $$;
+do $$
+declare
+  v_column text;
+begin
+  foreach v_column in array array[
+    'auth_session_id', 'endpoint', 'p256dh', 'auth_secret', 'browser_metadata'
+  ] loop
+    begin
+      execute format('select %I from public.push_subscriptions limit 1', v_column);
+      raise exception 'TEST_FAILED_PUSH_SECRET_EXPOSED: %', v_column;
+    exception when insufficient_privilege then null;
+    end;
+  end loop;
+end $$;
+do $$ begin
   begin
     insert into public.push_subscriptions (
       profile_id, household_id, installation_id, binding_id, auth_session_id,
@@ -92,7 +175,7 @@ select public.push_register_subscription(
 do $$ begin
   if not exists (
     select 1 from public.push_subscriptions
-    where profile_id = auth.uid()
+    where installation_id = 'c4000000-0000-4000-8000-000000000001'
       and binding_id = 'c5000000-0000-4000-8000-000000000002'
       and status = 'active'
   ) then raise exception 'TEST_FAILED_ATOMIC_REBIND'; end if;
@@ -116,7 +199,7 @@ select set_config(
   true
 );
 do $$ begin
-  if (select count(*) <> 0 from public.push_subscriptions) then
+  if (select count(installation_id) <> 0 from public.push_subscriptions) then
     raise exception 'TEST_FAILED_HOUSEHOLD_SUBSCRIPTION_LEAK';
   end if;
   perform public.push_deactivate_installation('c4000000-0000-4000-8000-000000000001');
