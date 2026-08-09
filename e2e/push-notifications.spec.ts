@@ -123,5 +123,5 @@ test('push-djuplänk positionerar kalendern och öppnar rätt förekomst', async
   })
   await page.goto(`/kalender?date=2027-01-03&event=${encodeURIComponent(eventKey)}`)
   await expect(page.getByRole('heading', { name: 'Djuplänkad träning' })).toBeVisible()
-  await expect(page.getByText('januari 2027')).toBeVisible()
+  await expect(page.locator('.calendar-toolbar h1')).toHaveText('januari 2027')
 })
