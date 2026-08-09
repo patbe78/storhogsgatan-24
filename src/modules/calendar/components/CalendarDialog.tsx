@@ -16,11 +16,16 @@ export function CalendarDialog({
   const dialogRef = useRef<HTMLElement>(null)
   useEffect(() => {
     if (!open) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     const initialFocus = dialogRef.current?.querySelector<HTMLElement>(
       '[data-calendar-dialog-initial-focus]'
     )
     const focusTarget = initialFocus ?? closeRef.current
     focusTarget?.focus()
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
   }, [open])
   if (!open) return null
   function handleKeyDown(event: React.KeyboardEvent) {

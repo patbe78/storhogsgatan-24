@@ -2,6 +2,7 @@ import { expect, type Page } from '@playwright/test'
 
 const userId = '11111111-1111-4111-8111-111111111111'
 const householdId = '24000000-0000-4000-8000-000000000024'
+const fixtureEventId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 const user = {
   id: userId,
   aud: 'authenticated',
@@ -20,9 +21,12 @@ export async function mockSupabase(
   profileOptions: {
     role?: 'admin' | 'adult' | 'member' | 'guest'
     isActive?: boolean
-    calendarEvents?: unknown[]
+    calendarEvents?: Array<Record<string, unknown>>
+    calendarCategories?: Array<Record<string, unknown>>
   } = {}
 ) {
+  const calendarEvents = [...(profileOptions.calendarEvents ?? [])]
+  const calendarCategories = [...(profileOptions.calendarCategories ?? [])]
   await page.route('**/auth/v1/**', async (route) => {
     const url = route.request().url()
     if (url.includes('/token'))
@@ -42,8 +46,51 @@ export async function mockSupabase(
     const request = route.request()
     const url = request.url()
     if (url.includes('/rpc/calendar_events_in_range'))
-      return route.fulfill({ json: profileOptions.calendarEvents ?? [] })
-    if (url.includes('/calendar_categories')) return route.fulfill({ json: [] })
+      return route.fulfill({ json: calendarEvents })
+    if (url.includes('/rpc/calendar_save_event')) {
+      const body = request.postDataJSON() as {
+        p_event_id: string | null
+        p_payload: Record<string, unknown>
+      }
+      const payload = body.p_payload
+      const id = body.p_event_id ?? fixtureEventId
+      const category = calendarCategories.find((item) => item.id === payload.categoryId)
+      const previous = calendarEvents.find((item) => item.id === id)
+      const row: Record<string, unknown> = {
+        id,
+        household_id: householdId,
+        title: payload.title,
+        description: payload.description ?? '',
+        location: payload.location || null,
+        notes: payload.notes || null,
+        category_id: payload.categoryId || null,
+        category_name: category?.name ?? null,
+        category_color: category?.color ?? null,
+        created_by: previous?.created_by ?? userId,
+        updated_by: userId,
+        starts_at: payload.startsAt ?? null,
+        ends_at: payload.endsAt ?? null,
+        all_day: payload.allDay,
+        all_day_start: payload.allDayStart ?? null,
+        all_day_end: payload.allDayEnd ?? null,
+        is_family_event: payload.isFamilyEvent,
+        reminder_offsets_minutes: payload.reminderOffsetsMinutes ?? [],
+        reminder_type: 'none',
+        reminder_offset_minutes: null,
+        external_source: payload.externalSource || null,
+        external_id: payload.externalId || null,
+        recurrence_series_id: previous?.recurrence_series_id ?? null,
+        participants: [{ id: userId, name: 'Patrik', color: '#2563eb' }],
+        recurrence: null,
+        created_at: previous?.created_at ?? '2026-08-09T00:00:00.000Z',
+        updated_at: '2026-08-09T00:00:00.000Z'
+      }
+      const index = calendarEvents.findIndex((item) => item.id === id)
+      if (index === -1) calendarEvents.push(row)
+      else calendarEvents[index] = row
+      return route.fulfill({ json: id })
+    }
+    if (url.includes('/calendar_categories')) return route.fulfill({ json: calendarCategories })
     if (url.includes('/profiles')) {
       const profile = {
         id: userId,
@@ -74,7 +121,8 @@ export async function login(
   profileOptions: {
     role?: 'admin' | 'adult' | 'member' | 'guest'
     isActive?: boolean
-    calendarEvents?: unknown[]
+    calendarEvents?: Array<Record<string, unknown>>
+    calendarCategories?: Array<Record<string, unknown>>
   } = {}
 ) {
   await mockSupabase(page, profileOptions)

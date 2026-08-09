@@ -66,6 +66,16 @@ export function CalendarPage() {
   const linkedItem = model.items.find((candidate) => candidate.key === params.get('event')) ?? null
   const activeSelected = selected ?? linkedItem
   const activeMode: Mode = mode === 'closed' && linkedItem ? 'details' : mode
+  const selectableProfiles = [...(profiles.data ?? [])]
+  if (
+    permissions.profile &&
+    !selectableProfiles.some((person) => person.id === permissions.profile?.id)
+  )
+    selectableProfiles.push({
+      id: permissions.profile.id,
+      name: permissions.profile.name,
+      color: permissions.profile.color
+    })
 
   if (permissions.isLoading)
     return (
@@ -107,7 +117,7 @@ export function CalendarPage() {
   }
 
   function candidateFor(input: CalendarEventInput): CalendarOccurrence {
-    const participants = (profiles.data ?? []).filter((person) =>
+    const participants = selectableProfiles.filter((person) =>
       input.participantIds.includes(person.id)
     )
     const event: CalendarEvent = {
@@ -324,11 +334,11 @@ export function CalendarPage() {
           event={activeMode === 'edit' ? eventForForm() : undefined}
           initialDate={initialDate}
           initialRecurrence={activeMode === 'edit' ? recurrenceForForm() : null}
-          profiles={profiles.data ?? []}
+          profiles={selectableProfiles}
           categories={categories.data ?? []}
           permissions={permissions}
           busy={mutations.save.isPending || mutations.split.isPending}
-          onSubmit={(input) => void submit(input)}
+          onSubmit={submit}
           onCancel={closeDialog}
         />
       </CalendarDialog>
