@@ -265,27 +265,7 @@ export function CalendarPage() {
           {actionError}
         </p>
       )}
-      <button
-        type="button"
-        className="secondary-button mobile-filter-button"
-        aria-expanded={filtersOpen}
-        onClick={() => setFiltersOpen((open) => !open)}
-      >
-        Filter
-      </button>
       <div className="calendar-layout">
-        <div className={`calendar-filter-panel ${filtersOpen ? 'open' : ''}`}>
-          <CalendarFilters
-            filters={filterState.filters}
-            profiles={profiles.data ?? []}
-            categories={categories.data ?? []}
-            onParticipant={filterState.toggleParticipant}
-            onCategory={filterState.toggleCategory}
-            onMine={filterState.setMineOnly}
-            onFamily={filterState.setFamilyOnly}
-            onClear={filterState.clearFilters}
-          />
-        </div>
         <main className="calendar-canvas">
           <CalendarStatus
             loading={events.isLoading || profiles.isLoading || categories.isLoading}
@@ -303,7 +283,11 @@ export function CalendarPage() {
               onSwipe={(direction) => (direction === 1 ? navigation.next() : navigation.previous())}
             >
               {navigation.view === 'month' && (
-                <CalendarMonthView {...commonViewProps} onCreate={createAt} />
+                <CalendarMonthView
+                  {...commonViewProps}
+                  selectedDate={initialDate}
+                  onCreate={createAt}
+                />
               )}
               {navigation.view === 'week' && (
                 <CalendarWeekView {...commonViewProps} onCreate={createAt} />
@@ -316,6 +300,35 @@ export function CalendarPage() {
           )}
         </main>
       </div>
+      <section className="calendar-filter-section" aria-labelledby="calendar-filter-heading">
+        <div className="calendar-filter-section__heading">
+          <h2 id="calendar-filter-heading">Filter</h2>
+          <button
+            type="button"
+            className="secondary-button mobile-filter-button"
+            aria-expanded={filtersOpen}
+            aria-controls="calendar-filter-panel"
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            {filtersOpen ? 'Dölj filter' : 'Visa filter'}
+          </button>
+        </div>
+        <div
+          id="calendar-filter-panel"
+          className={`calendar-filter-panel ${filtersOpen ? 'open' : ''}`}
+        >
+          <CalendarFilters
+            filters={filterState.filters}
+            profiles={profiles.data ?? []}
+            categories={categories.data ?? []}
+            onParticipant={filterState.toggleParticipant}
+            onCategory={filterState.toggleCategory}
+            onMine={filterState.setMineOnly}
+            onFamily={filterState.setFamilyOnly}
+            onClear={filterState.clearFilters}
+          />
+        </div>
+      </section>
       {permissions.canManageCategories && (
         <button
           type="button"
