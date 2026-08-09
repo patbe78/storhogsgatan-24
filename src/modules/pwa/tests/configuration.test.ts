@@ -5,6 +5,16 @@ import { describe, expect, it } from 'vitest'
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
 
 describe('PWA-konfiguration', () => {
+  it('bygger och visar releaseversion 0.5.0 från paketets versionskälla', () => {
+    const packageJson = JSON.parse(read('package.json')) as { version: string }
+    const config = read('vite.config.ts')
+    const statusPanel = read('src/modules/pwa/components/PwaStatusPanel.tsx')
+
+    expect(packageJson.version).toBe('0.5.0')
+    expect(config).toContain("process.env.npm_package_version ?? '0.5.0'")
+    expect(statusPanel).toContain('{__APP_VERSION__}')
+  })
+
   it('behåller GitHub Pages-basen och promptbaserad registrering', () => {
     const config = read('vite.config.ts')
     expect(config).toContain("base: mode === 'production' ? '/storhogsgatan-24/' : '/'")

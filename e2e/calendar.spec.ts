@@ -1,38 +1,41 @@
 import { test, expect } from '@playwright/test'
 import { login } from './calendar-fixture'
 
-test('auth, session, navigation och kalenderformulär fungerar med isolerad Supabase-fixture', async ({
-  page
-}) => {
+test('auth, session, navigation och kompakt kalenderformulär fungerar', async ({ page }) => {
   await login(page)
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Välkommen Patrik' })).toBeVisible()
-  await page.getByRole('main').getByRole('link', { name: 'Kalender' }).click()
+  await page.getByRole('link', { name: 'Inställningar' }).click()
+  await expect(page.getByText('Version').locator('..')).toContainText('0.5.0')
+  await page.getByRole('link', { name: 'Kalender' }).click()
   await expect(page.getByRole('button', { name: 'Månad' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: /Ny aktivitet/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Ny aktivitet' })
-  const title = page.getByLabel('Titel *')
-  const description = page.getByLabel('Beskrivning', { exact: true })
   await expect(dialog).toBeVisible()
-  await expect(title).toBeFocused()
-  await expect(description).not.toHaveAttribute('required', '')
-  await expect(description).toHaveAttribute('rows', '2')
-  await expect(dialog.getByRole('group', { name: 'Start' })).toBeVisible()
-  await expect(dialog.getByRole('group', { name: 'Slut' })).toBeVisible()
-  await expect(dialog.getByLabel('Hela familjen')).toBeVisible()
+  await expect(page.getByLabel('Titel *')).toBeFocused()
+  await expect(dialog.getByLabel('Startdatum *')).toBeVisible()
+  await expect(dialog.getByLabel('Starttid *')).toBeVisible()
+  await expect(dialog.getByLabel('Varaktighet *')).toContainText('1 timme')
+  await expect(dialog.getByLabel('Beskrivning')).toHaveCount(0)
+  await expect(dialog.getByText('Extern referens')).toHaveCount(0)
+  await expect(dialog.getByLabel('Sluttid *')).toHaveCount(0)
 
-  const initialDescriptionHeight = await description.evaluate((element) => element.clientHeight)
-  await description.fill(Array.from({ length: 20 }, (_, index) => `Rad ${index + 1}`).join('\n'))
-  const expandedDescriptionHeight = await description.evaluate((element) => element.clientHeight)
-  expect(expandedDescriptionHeight).toBeGreaterThan(initialDescriptionHeight)
-  expect(expandedDescriptionHeight).toBeLessThanOrEqual(180)
+  await dialog.getByRole('group', { name: 'Deltagare *' }).getByRole('button').click()
+  const participantSheet = page.getByRole('dialog', { name: 'Deltagare' })
+  await expect(participantSheet.getByLabel('Hela familjen')).toBeVisible()
+  await participantSheet.getByRole('button', { name: 'Klar' }).click()
+
+  await dialog.getByRole('button', { name: 'Ingen påminnelse' }).click()
+  const reminderSheet = page.getByRole('dialog', { name: 'Påminnelser' })
+  await reminderSheet.getByLabel('15 minuter före', { exact: true }).check()
+  await reminderSheet.getByLabel('2 dagar före', { exact: true }).check()
+  await reminderSheet.getByRole('button', { name: 'Klar' }).click()
+  await expect(dialog.getByRole('button', { name: '15 min + 2 dagar' })).toBeVisible()
 
   await page.getByLabel('Heldagsaktivitet').check()
-  await page.getByLabel('15 minuter före').check()
-  await page.getByLabel('2 dagar före').check()
-  await expect(page.getByLabel('15 minuter före')).toBeChecked()
-  await expect(page.getByLabel('2 dagar före')).toBeChecked()
-  await expect(dialog.locator('input[type="time"]')).toHaveCount(0)
+  await expect(dialog.getByLabel('Starttid *')).toHaveCount(0)
+  await expect(dialog.getByLabel('Varaktighet *')).toHaveCount(0)
+  await expect(dialog.getByLabel('Slutdatum *')).toBeVisible()
   await expect
     .poll(() => dialog.evaluate((element) => element.scrollWidth <= element.clientWidth))
     .toBe(true)
