@@ -208,13 +208,27 @@ describe('CalendarEventForm', () => {
 
   it('visar återkomstformuläret utan att ändra dess semantik', async () => {
     render(<CalendarEventForm {...props} />)
-    await userEvent.click(screen.getByLabelText('Återkommande aktivitet'))
+    const inactiveToggle = screen.getByLabelText('Återkommande aktivitet')
+    expect(inactiveToggle.closest('label')).toHaveClass(
+      'calendar-checkbox-row',
+      'recurrence-toggle'
+    )
+    expect(inactiveToggle.closest('label')).not.toHaveClass('active')
+    await userEvent.click(inactiveToggle)
+    const activeToggle = screen.getByLabelText('Återkommande aktivitet')
+    expect(activeToggle).toBeChecked()
+    expect(activeToggle.closest('label')).toHaveClass('recurrence-toggle', 'active')
     expect(screen.getByLabelText('Frekvens')).toBeInTheDocument()
     expect(screen.getByLabelText('Intervall')).toHaveValue(1)
     expect(screen.getByRole('option', { name: 'Dagligen' })).toHaveValue('daily')
     expect(screen.getByRole('option', { name: 'Varje vecka' })).toHaveValue('weekly')
     expect(screen.getByRole('option', { name: 'Varje månad' })).toHaveValue('monthly')
     expect(screen.getByRole('option', { name: 'Varje år' })).toHaveValue('yearly')
+    await userEvent.click(activeToggle)
+    expect(screen.queryByLabelText('Frekvens')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Återkommande aktivitet').closest('label')).not.toHaveClass(
+      'active'
+    )
   })
 
   it('förhindrar dubbel-save medan requesten pågår', async () => {

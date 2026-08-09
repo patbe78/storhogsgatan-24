@@ -9,20 +9,21 @@ export function CalendarRecurrenceForm({
 }) {
   if (!value)
     return (
-      <label>
+      <label className="calendar-checkbox-row recurrence-toggle">
         <input
           type="checkbox"
           checked={false}
           onChange={() => onChange({ frequency: 'weekly', intervalValue: 1 })}
-        />{' '}
-        Återkommande aktivitet
+        />
+        <span>Återkommande aktivitet</span>
       </label>
     )
   return (
     <fieldset className="form-fieldset">
       <legend>Återkomst</legend>
-      <label>
-        <input type="checkbox" checked onChange={() => onChange(null)} /> Återkommande aktivitet
+      <label className="calendar-checkbox-row recurrence-toggle active">
+        <input type="checkbox" checked onChange={() => onChange(null)} />
+        <span>Återkommande aktivitet</span>
       </label>
       <div className="form-row">
         <label>
