@@ -42,6 +42,7 @@ function dependencies(overrides: Partial<DispatchDependencies> = {}): DispatchDe
       })
     },
     logDiagnostic: () => undefined,
+    logTransportDiagnostic: () => undefined,
     databaseLoads,
     webPushLoads,
     ...overrides
@@ -194,6 +195,67 @@ Deno.test('importfel ger sanerad init_failed utan credentials', async () => {
   assertFalse(logged.includes('secret-endpoint'))
   assertFalse(logged.includes('secret-p256dh'))
   assertFalse(logged.includes('secret-auth'))
+})
+
+Deno.test('transportdiagnostik loggas och journalförs utan credentials', async () => {
+  const transportDiagnostics: unknown[] = []
+  let completionParameters: Record<string, unknown> | undefined
+  const delivery = {
+    delivery_id: 'delivery-transport',
+    claim_token: 'claim-transport',
+    endpoint: 'https://secret-endpoint.invalid',
+    p256dh: 'secret-p256dh',
+    auth_secret: 'secret-auth',
+    binding_id: 'binding-transport',
+    event_id: 'event-transport',
+    occurrence_starts_at: '2026-08-09T10:00:00Z',
+    scheduled_at: '2026-08-09T09:45:00Z',
+    title: 'Test',
+    all_day: false,
+    offset_minutes: 15
+  }
+  const input = dependencies({
+    createClient: () =>
+      Promise.resolve({
+        rpc: (name, parameters) => {
+          if (name === 'calendar_claim_due_push_deliveries')
+            return Promise.resolve({ data: [delivery], error: null })
+          if (name === 'calendar_confirm_push_delivery')
+            return Promise.resolve({ data: true, error: null })
+          completionParameters = parameters
+          return Promise.resolve({ data: null, error: null })
+        }
+      }),
+    loadWebPush: () =>
+      Promise.resolve({
+        sendCalendarPush: () =>
+          Promise.resolve({
+            status: 'failed',
+            errorClass: 'network_error',
+            diagnostic: {
+              errorClass: 'network_error',
+              stage: 'request',
+              safeCode: 'ECONNRESET'
+            }
+          })
+      }),
+    logTransportDiagnostic: (diagnostic) => transportDiagnostics.push(diagnostic)
+  })
+  const response = await createDispatchHandler(input)(
+    new Request('https://function.test', {
+      method: 'POST',
+      headers: { 'x-calendar-cron-secret': 'cron-test-secret' }
+    })
+  )
+  assertEquals(response.status, 200)
+  assertEquals(transportDiagnostics, [
+    { errorClass: 'network_error', stage: 'request', safeCode: 'ECONNRESET' }
+  ])
+  assertEquals(completionParameters?.p_error_class, 'network_error')
+  const logged = JSON.stringify(transportDiagnostics)
+  assertFalse(logged.includes(delivery.endpoint))
+  assertFalse(logged.includes(delivery.p256dh))
+  assertFalse(logged.includes(delivery.auth_secret))
 })
 
 Deno.test({

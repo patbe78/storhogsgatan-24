@@ -4,7 +4,9 @@ import {
   classifyPushError,
   occurrenceDate,
   secureEqual,
-  type CalendarPushDelivery
+  sendCalendarPush,
+  type CalendarPushDelivery,
+  type WebPushClient
 } from './web-push.ts'
 
 const delivery: CalendarPushDelivery = {
@@ -29,9 +31,108 @@ Deno.test('cron-hemligheten jämförs utan tidig exit', () => {
 })
 
 Deno.test('404 och 410 klassas som ogiltig subscription', () => {
-  assertEquals(classifyPushError({ statusCode: 404 }).status, 'invalid_subscription')
+  assertEquals(classifyPushError({ statusCode: 404 }), {
+    status: 'invalid_subscription',
+    errorClass: 'invalid_subscription',
+    diagnostic: {
+      errorClass: 'invalid_subscription',
+      stage: 'provider_response',
+      statusCode: 404,
+      safeCode: 'push_404'
+    }
+  })
   assertEquals(classifyPushError({ statusCode: 410 }).status, 'invalid_subscription')
-  assertEquals(classifyPushError({ statusCode: 503 }).status, 'failed')
+})
+
+Deno.test('provider-, nätverks- och krypteringsfel får säkra klasser', () => {
+  assertEquals(classifyPushError({ statusCode: 400 }).diagnostic, {
+    errorClass: 'push_provider_4xx',
+    stage: 'provider_response',
+    statusCode: 400
+  })
+  assertEquals(classifyPushError({ statusCode: 503 }).diagnostic, {
+    errorClass: 'push_provider_5xx',
+    stage: 'provider_response',
+    statusCode: 503
+  })
+  assertEquals(classifyPushError({ code: 'ECONNRESET' }).diagnostic, {
+    errorClass: 'network_error',
+    stage: 'request',
+    safeCode: 'ECONNRESET'
+  })
+  assertEquals(
+    classifyPushError({
+      message: 'The subscription p256dh value should be 65 bytes long.'
+    }).diagnostic,
+    {
+      errorClass: 'encryption_error',
+      stage: 'encryption',
+      safeCode: 'invalid_p256dh'
+    }
+  )
+})
+
+Deno.test('providerkod vitlistas utan att råsvaret eller credentials exponeras', () => {
+  const result = classifyPushError({
+    statusCode: 403,
+    body: `BadJwtToken ${delivery.endpoint} ${delivery.auth_secret}`,
+    endpoint: delivery.endpoint
+  })
+  assertEquals(result.diagnostic, {
+    errorClass: 'vapid_error',
+    stage: 'provider_response',
+    statusCode: 403,
+    safeCode: 'bad_jwt_token'
+  })
+  const serialized = JSON.stringify(result)
+  assertFalse(serialized.includes(delivery.endpoint))
+  assertFalse(serialized.includes(delivery.auth_secret))
+})
+
+Deno.test('okänt transportfel är sanerad sista fallback', () => {
+  const result = classifyPushError({
+    message: `transport ${delivery.endpoint}`,
+    stack: `${delivery.p256dh} ${delivery.auth_secret}`
+  })
+  assertEquals(result.diagnostic, {
+    errorClass: 'push_transport_error',
+    stage: 'request'
+  })
+  const serialized = JSON.stringify(result)
+  assertFalse(serialized.includes(delivery.endpoint))
+  assertFalse(serialized.includes(delivery.p256dh))
+  assertFalse(serialized.includes(delivery.auth_secret))
+})
+
+Deno.test('VAPID-fel avbryter före request och loggar aldrig nyckelvärden', async () => {
+  let requestStarted = false
+  const client: WebPushClient = {
+    setVapidDetails: () => {
+      throw new Error(`Vapid private key must be valid ${delivery.auth_secret}`)
+    },
+    sendNotification: () => {
+      requestStarted = true
+      return Promise.resolve()
+    }
+  }
+  const result = await sendCalendarPush(
+    delivery,
+    {
+      subject: 'mailto:test@example.invalid',
+      publicKey: 'public-vapid',
+      privateKey: 'private-vapid'
+    },
+    client
+  )
+  assertEquals(result.diagnostic, {
+    errorClass: 'vapid_error',
+    stage: 'vapid_init',
+    safeCode: 'invalid_vapid_private_key'
+  })
+  assertFalse(requestStarted)
+  const serialized = JSON.stringify(result)
+  assertFalse(serialized.includes('private-vapid'))
+  assertFalse(serialized.includes(delivery.auth_secret))
 })
 
 Deno.test('payloaden är minimal och saknar subscription-credentials och beskrivning', () => {

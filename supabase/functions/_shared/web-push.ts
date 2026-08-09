@@ -13,9 +13,31 @@ export interface CalendarPushDelivery {
   offset_minutes: number
 }
 
+export type PushErrorClass =
+  | 'invalid_subscription'
+  | 'vapid_error'
+  | 'encryption_error'
+  | 'push_provider_4xx'
+  | 'push_provider_5xx'
+  | 'network_error'
+  | 'push_transport_error'
+
+export type PushErrorStage = 'vapid_init' | 'encryption' | 'request' | 'provider_response'
+
+export interface PushDiagnostic {
+  errorClass: PushErrorClass
+  stage: PushErrorStage
+  statusCode?: number
+  safeCode?: string
+}
+
 export type PushResult =
-  | { status: 'sent'; errorClass: null }
-  | { status: 'invalid_subscription' | 'failed'; errorClass: string }
+  | { status: 'sent'; errorClass: null; diagnostic: null }
+  | {
+      status: 'invalid_subscription' | 'failed'
+      errorClass: PushErrorClass
+      diagnostic: PushDiagnostic
+    }
 
 export interface WebPushClient {
   setVapidDetails(subject: string, publicKey: string, privateKey: string): void
@@ -50,15 +72,169 @@ export function secureEqual(actual: string | null, expected: string): boolean {
   return difference === 0
 }
 
+interface PushErrorShape {
+  statusCode?: unknown
+  code?: unknown
+  message?: unknown
+  body?: unknown
+}
+
+const networkCodes = new Set([
+  'ECONNRESET',
+  'ETIMEDOUT',
+  'ENOTFOUND',
+  'EAI_AGAIN',
+  'ECONNREFUSED',
+  'EHOSTUNREACH',
+  'ENETUNREACH',
+  'ERR_TLS_CERT_ALTNAME_INVALID',
+  'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+  'CERT_HAS_EXPIRED'
+])
+
+const providerCodes: ReadonlyArray<[needle: string, safeCode: string]> = [
+  ['badjwttoken', 'bad_jwt_token'],
+  ['unauthorizedregistration', 'unauthorized_registration'],
+  ['invalidregistration', 'invalid_registration'],
+  ['mismatchsenderid', 'sender_id_mismatch'],
+  ['third_party_auth_error', 'third_party_auth_error'],
+  ['quota_exceeded', 'quota_exceeded'],
+  ['unavailable', 'provider_unavailable']
+]
+
+const vapidMessages: ReadonlyArray<[prefix: string, safeCode: string]> = [
+  ['No subject set in vapidDetails.subject.', 'missing_vapid_subject'],
+  ['The subject value must be a string', 'invalid_vapid_subject'],
+  ['Vapid subject is not a valid URL.', 'invalid_vapid_subject'],
+  ['Vapid subject is not an https: or mailto: URL.', 'invalid_vapid_subject'],
+  ['No key set vapidDetails.publicKey', 'missing_vapid_public_key'],
+  ['Vapid public key', 'invalid_vapid_public_key'],
+  ['No key set in vapidDetails.privateKey', 'missing_vapid_private_key'],
+  ['Vapid private key', 'invalid_vapid_private_key'],
+  ['No audience could be generated for VAPID.', 'invalid_vapid_audience'],
+  ['The audience value must be a string', 'invalid_vapid_audience'],
+  ['VAPID audience is not a url.', 'invalid_vapid_audience']
+]
+
+const encryptionMessages: ReadonlyArray<[prefix: string, safeCode: string]> = [
+  ['No user public key provided for encryption.', 'missing_p256dh'],
+  ['The subscription p256dh value', 'invalid_p256dh'],
+  ['No user auth provided for encryption.', 'missing_auth_secret'],
+  ['The subscription auth key', 'invalid_auth_secret'],
+  ['Payload must be either a string or a Node Buffer.', 'invalid_payload']
+]
+
+function errorShape(error: unknown): PushErrorShape {
+  return (typeof error === 'object' && error !== null ? error : {}) as PushErrorShape
+}
+
+function safeStatusCode(error: unknown): number | undefined {
+  const statusCode = Number(errorShape(error).statusCode)
+  return Number.isInteger(statusCode) && statusCode >= 100 && statusCode <= 599
+    ? statusCode
+    : undefined
+}
+
+function safeMessageCode(
+  error: unknown,
+  messages: ReadonlyArray<[prefix: string, safeCode: string]>
+): string | undefined {
+  const message = errorShape(error).message
+  if (typeof message !== 'string') return undefined
+  return messages.find(([prefix]) => message.startsWith(prefix))?.[1]
+}
+
+function safeProviderCode(error: unknown): string | undefined {
+  const body = errorShape(error).body
+  if (typeof body !== 'string') return undefined
+  const normalizedBody = body.toLowerCase()
+  return providerCodes.find(([needle]) => normalizedBody.includes(needle))?.[1]
+}
+
+function failure(
+  status: 'invalid_subscription' | 'failed',
+  errorClass: PushErrorClass,
+  stage: PushErrorStage,
+  statusCode?: number,
+  safeCode?: string
+): PushResult {
+  return {
+    status,
+    errorClass,
+    diagnostic: {
+      errorClass,
+      stage,
+      ...(statusCode === undefined ? {} : { statusCode }),
+      ...(safeCode === undefined ? {} : { safeCode })
+    }
+  }
+}
+
+function classifyVapidError(error: unknown): PushResult {
+  return failure(
+    'failed',
+    'vapid_error',
+    'vapid_init',
+    undefined,
+    safeMessageCode(error, vapidMessages) ?? 'vapid_init_failed'
+  )
+}
+
 export function classifyPushError(error: unknown): PushResult {
-  const statusCode = Number((error as { statusCode?: unknown } | null)?.statusCode ?? 0)
+  const statusCode = safeStatusCode(error)
   if (statusCode === 404 || statusCode === 410)
-    return { status: 'invalid_subscription', errorClass: `push_${statusCode}` }
+    return failure(
+      'invalid_subscription',
+      'invalid_subscription',
+      'provider_response',
+      statusCode,
+      `push_${statusCode}`
+    )
   if (statusCode === 401 || statusCode === 403)
-    return { status: 'failed', errorClass: 'vapid_rejected' }
-  if (statusCode === 429) return { status: 'failed', errorClass: 'push_rate_limited' }
-  if (statusCode >= 500) return { status: 'failed', errorClass: 'push_provider_error' }
-  return { status: 'failed', errorClass: 'push_transport_error' }
+    return failure(
+      'failed',
+      'vapid_error',
+      'provider_response',
+      statusCode,
+      safeProviderCode(error) ?? 'vapid_rejected'
+    )
+  if (statusCode !== undefined && statusCode >= 400 && statusCode <= 499)
+    return failure(
+      'failed',
+      'push_provider_4xx',
+      'provider_response',
+      statusCode,
+      statusCode === 429 ? 'rate_limited' : safeProviderCode(error)
+    )
+  if (statusCode !== undefined && statusCode >= 500)
+    return failure(
+      'failed',
+      'push_provider_5xx',
+      'provider_response',
+      statusCode,
+      safeProviderCode(error)
+    )
+
+  const vapidCode = safeMessageCode(error, vapidMessages)
+  if (vapidCode) return failure('failed', 'vapid_error', 'vapid_init', undefined, vapidCode)
+
+  const encryptionCode = safeMessageCode(error, encryptionMessages)
+  const runtimeCode = errorShape(error).code
+  if (encryptionCode || runtimeCode === 'ERR_CRYPTO_ECDH_INVALID_PUBLIC_KEY')
+    return failure(
+      'failed',
+      'encryption_error',
+      'encryption',
+      undefined,
+      encryptionCode ?? 'invalid_p256dh'
+    )
+
+  if (typeof runtimeCode === 'string' && networkCodes.has(runtimeCode))
+    return failure('failed', 'network_error', 'request', undefined, runtimeCode)
+  if (errorShape(error).message === 'Socket timeout')
+    return failure('failed', 'network_error', 'request', undefined, 'SOCKET_TIMEOUT')
+
+  return failure('failed', 'push_transport_error', 'request')
 }
 
 export function occurrenceDate(value: string): string {
@@ -106,9 +282,20 @@ export async function sendCalendarPush(
   vapid: { subject: string; publicKey: string; privateKey: string },
   initializedClient?: WebPushClient
 ): Promise<PushResult> {
+  let webpush: WebPushClient
   try {
-    const webpush = initializedClient ?? (await initializeWebPush())
+    webpush = initializedClient ?? (await initializeWebPush())
+  } catch {
+    return failure('failed', 'push_transport_error', 'request', undefined, 'WEB_PUSH_INIT_FAILED')
+  }
+
+  try {
     webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey)
+  } catch (error) {
+    return classifyVapidError(error)
+  }
+
+  try {
     await webpush.sendNotification(
       {
         endpoint: delivery.endpoint,
@@ -117,7 +304,7 @@ export async function sendCalendarPush(
       buildCalendarPushPayload(delivery),
       { TTL: 600, urgency: 'high' }
     )
-    return { status: 'sent', errorClass: null }
+    return { status: 'sent', errorClass: null, diagnostic: null }
   } catch (error) {
     return classifyPushError(error)
   }
