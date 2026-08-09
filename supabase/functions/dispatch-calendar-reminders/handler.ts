@@ -18,6 +18,21 @@ interface CalendarPushDelivery {
 interface PushResult {
   status: 'sent' | 'invalid_subscription' | 'failed'
   errorClass: string | null
+  diagnostic?: PushTransportDiagnostic | null
+}
+
+interface PushTransportDiagnostic {
+  errorClass:
+    | 'invalid_subscription'
+    | 'vapid_error'
+    | 'encryption_error'
+    | 'push_provider_4xx'
+    | 'push_provider_5xx'
+    | 'network_error'
+    | 'push_transport_error'
+  stage: 'vapid_init' | 'encryption' | 'request' | 'provider_response'
+  statusCode?: number
+  safeCode?: string
 }
 
 interface RpcResult {
@@ -44,6 +59,7 @@ export interface DispatchDependencies {
   createClient: (supabaseUrl: string, adminKey: string) => Promise<DispatchClient>
   loadWebPush: () => Promise<{ sendCalendarPush: SendCalendarPush }>
   logDiagnostic: (diagnostic: Diagnostic) => void
+  logTransportDiagnostic: (diagnostic: PushTransportDiagnostic) => void
 }
 
 interface CoreEnvironment {
@@ -89,7 +105,8 @@ async function processDelivery(
   client: DispatchClient,
   delivery: CalendarPushDelivery,
   vapid: VapidEnvironment,
-  sendCalendarPush: SendCalendarPush
+  sendCalendarPush: SendCalendarPush,
+  logTransportDiagnostic: (diagnostic: PushTransportDiagnostic) => void
 ) {
   const { data: confirmed, error: confirmError } = await client.rpc(
     'calendar_confirm_push_delivery',
@@ -106,6 +123,7 @@ async function processDelivery(
   }
 
   const result = await sendCalendarPush(delivery, vapid)
+  if (result.diagnostic) logTransportDiagnostic(result.diagnostic)
   const { error: completionError } = await client.rpc('calendar_complete_push_delivery', {
     p_delivery_id: delivery.delivery_id,
     p_claim_token: delivery.claim_token,
@@ -124,14 +142,17 @@ async function processInBatches(
   client: DispatchClient,
   deliveries: CalendarPushDelivery[],
   vapid: VapidEnvironment,
-  sendCalendarPush: SendCalendarPush
+  sendCalendarPush: SendCalendarPush,
+  logTransportDiagnostic: (diagnostic: PushTransportDiagnostic) => void
 ) {
   const batchSize = 10
   for (let index = 0; index < deliveries.length; index += batchSize) {
     const results = await Promise.allSettled(
       deliveries
         .slice(index, index + batchSize)
-        .map((delivery) => processDelivery(client, delivery, vapid, sendCalendarPush))
+        .map((delivery) =>
+          processDelivery(client, delivery, vapid, sendCalendarPush, logTransportDiagnostic)
+        )
     )
     results.forEach((result, resultIndex) => {
       if (result.status === 'rejected') {
@@ -160,6 +181,9 @@ const defaultDependencies: DispatchDependencies = {
   },
   logDiagnostic(diagnostic) {
     console.error('calendar push startup diagnostic', diagnostic)
+  },
+  logTransportDiagnostic(diagnostic) {
+    console.error('calendar push transport diagnostic', diagnostic)
   }
 }
 
@@ -223,7 +247,13 @@ export function createDispatchHandler(
       return Response.json({ ok: false, error: 'init_failed' }, { status: 500 })
     }
 
-    await processInBatches(client, deliveries, vapid, webPush.sendCalendarPush)
+    await processInBatches(
+      client,
+      deliveries,
+      vapid,
+      webPush.sendCalendarPush,
+      dependencies.logTransportDiagnostic
+    )
     return Response.json({ ok: true, claimed: deliveries.length })
   }
 }
