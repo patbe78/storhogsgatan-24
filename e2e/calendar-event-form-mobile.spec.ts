@@ -1,7 +1,32 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Locator } from '@playwright/test'
 import { login } from './calendar-fixture'
 
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+async function expectAllDayDatesStacked(dialog: Locator) {
+  const start = await dialog.getByLabel('Startdatum *').boundingBox()
+  const end = await dialog.getByLabel('Slutdatum *').boundingBox()
+  expect(start).not.toBeNull()
+  expect(end).not.toBeNull()
+  expect(end!.y).toBeGreaterThan(start!.y + start!.height)
+  expect(start!.width).toBeGreaterThan(250)
+  expect(end!.width).toBeGreaterThan(250)
+}
+
+async function expectRecurrenceAligned(dialog: Locator) {
+  const checkbox = dialog.getByLabel('Återkommande aktivitet')
+  const row = checkbox.locator('..')
+  const checkboxBox = await checkbox.boundingBox()
+  const textBox = await row.locator('span').boundingBox()
+  const rowBox = await row.boundingBox()
+  expect(checkboxBox).not.toBeNull()
+  expect(textBox).not.toBeNull()
+  expect(rowBox).not.toBeNull()
+  expect(
+    Math.abs(checkboxBox!.y + checkboxBox!.height / 2 - (textBox!.y + textBox!.height / 2))
+  ).toBeLessThanOrEqual(2)
+  expect(rowBox!.height).toBeGreaterThanOrEqual(48)
+}
 
 test('skapar, öppnar och redigerar aktivitet med duration och flera reminders', async ({
   page
@@ -21,6 +46,20 @@ test('skapar, öppnar och redigerar aktivitet med duration och flera reminders',
   await page.getByRole('main').getByRole('link', { name: 'Kalender' }).click()
   await page.getByRole('button', { name: /Ny aktivitet/ }).click()
   const createDialog = page.getByRole('dialog', { name: 'Ny aktivitet' })
+  await expectRecurrenceAligned(createDialog)
+  const createRecurrence = createDialog.getByLabel('Återkommande aktivitet')
+  await createRecurrence.check()
+  await expect(createDialog.locator('.recurrence-toggle')).toHaveClass(/active/)
+  await expect(createDialog.getByLabel('Frekvens')).toBeVisible()
+  await createRecurrence.uncheck()
+  await expect(createDialog.getByLabel('Frekvens')).toHaveCount(0)
+
+  await createDialog.getByLabel('Heldagsaktivitet').check()
+  await expectAllDayDatesStacked(createDialog)
+  await createDialog.getByLabel('Heldagsaktivitet').uncheck()
+  await expect(createDialog.getByLabel('Starttid *')).toBeVisible()
+  await expect(createDialog.getByLabel('Varaktighet *')).toBeVisible()
+
   await createDialog.getByLabel('Titel *').fill('Sprint 4D aktivitet')
   await createDialog.getByLabel('Startdatum *').fill('2026-08-10')
   await createDialog.getByLabel('Starttid *').fill('09:00')
@@ -64,6 +103,18 @@ test('skapar, öppnar och redigerar aktivitet med duration och flera reminders',
     'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
   )
   await expect(editDialog.getByLabel('Anteckning')).toHaveValue('Mobiltest')
+
+  await expectRecurrenceAligned(editDialog)
+  const editRecurrence = editDialog.getByLabel('Återkommande aktivitet')
+  await editRecurrence.check()
+  await expect(editDialog.locator('.recurrence-toggle')).toHaveClass(/active/)
+  await editRecurrence.uncheck()
+  await expect(editDialog.locator('.recurrence-toggle')).not.toHaveClass(/active/)
+
+  await editDialog.getByLabel('Heldagsaktivitet').check()
+  await expectAllDayDatesStacked(editDialog)
+  await editDialog.getByLabel('Heldagsaktivitet').uncheck()
+  await expect(editDialog.getByLabel('Starttid *')).toHaveValue('09:00')
 
   await editDialog.getByLabel('Varaktighet *').click()
   await page
