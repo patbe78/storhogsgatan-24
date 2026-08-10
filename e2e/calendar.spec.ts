@@ -6,7 +6,7 @@ test('auth, session, navigation och kompakt kalenderformulär fungerar', async (
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Välkommen Patrik' })).toBeVisible()
   await page.getByRole('link', { name: 'Inställningar' }).click()
-  await expect(page.getByText('Version').locator('..')).toContainText('0.6.0')
+  await expect(page.getByText('Version').locator('..')).toContainText('0.6.1')
   await page.getByRole('link', { name: 'Kalender' }).click()
   await expect(page.getByRole('button', { name: 'Månad' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: /Ny aktivitet/ }).click()

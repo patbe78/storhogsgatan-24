@@ -23,10 +23,12 @@ export async function mockSupabase(
     isActive?: boolean
     calendarEvents?: Array<Record<string, unknown>>
     calendarCategories?: Array<Record<string, unknown>>
+    calendarSaveFailures?: number
   } = {}
 ) {
   const calendarEvents = [...(profileOptions.calendarEvents ?? [])]
   const calendarCategories = [...(profileOptions.calendarCategories ?? [])]
+  let remainingSaveFailures = profileOptions.calendarSaveFailures ?? 0
   await page.route('**/auth/v1/**', async (route) => {
     const url = route.request().url()
     if (url.includes('/token'))
@@ -48,6 +50,13 @@ export async function mockSupabase(
     if (url.includes('/rpc/calendar_events_in_range'))
       return route.fulfill({ json: calendarEvents })
     if (url.includes('/rpc/calendar_save_event')) {
+      if (remainingSaveFailures > 0) {
+        remainingSaveFailures -= 1
+        return route.fulfill({
+          status: 400,
+          json: { code: 'P0001', message: 'Simulerat kalenderfel' }
+        })
+      }
       const body = request.postDataJSON() as {
         p_event_id: string | null
         p_payload: Record<string, unknown>
@@ -123,6 +132,7 @@ export async function login(
     isActive?: boolean
     calendarEvents?: Array<Record<string, unknown>>
     calendarCategories?: Array<Record<string, unknown>>
+    calendarSaveFailures?: number
   } = {}
 ) {
   await mockSupabase(page, profileOptions)
