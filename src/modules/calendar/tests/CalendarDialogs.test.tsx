@@ -2,12 +2,30 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { CalendarDialog } from '../components/CalendarDialog'
+import { CalendarPickerSheet } from '../components/CalendarPickerSheet'
 import { CalendarConflictWarning } from '../components/CalendarConflictWarning'
 import { RecurringEventActionDialog } from '../components/RecurringEventActionDialog'
 import { singleOccurrence } from '../utils/calendar-recurrence'
 import { event, felix } from './fixtures'
 
 describe('calendar dialogs', () => {
+  it('återställer global scroll när en dialog med öppet sheet unmountas', () => {
+    const nested = (sheetOpen: boolean) => (
+      <CalendarDialog title="Ny aktivitet" open onClose={vi.fn()}>
+        <CalendarPickerSheet title="Deltagare" open={sheetOpen} onClose={vi.fn()}>
+          Innehåll
+        </CalendarPickerSheet>
+      </CalendarDialog>
+    )
+    const view = render(nested(false))
+    view.rerender(nested(true))
+
+    expect(document.body.style.overflow).toBe('hidden')
+    view.unmount()
+
+    expect(document.body.style.overflow).toBe('')
+  })
+
   it('fokuserar markerat titelfält och behåller Escape samt fokusfälla', async () => {
     const onClose = vi.fn()
     render(

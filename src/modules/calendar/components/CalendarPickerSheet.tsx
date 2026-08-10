@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+import { useCalendarScrollLock } from '../hooks/useCalendarScrollLock'
 
 export function CalendarPickerSheet({
   title,
@@ -14,15 +15,11 @@ export function CalendarPickerSheet({
 }) {
   const titleId = useId()
   const closeRef = useRef<HTMLButtonElement>(null)
+  useCalendarScrollLock(open)
 
   useEffect(() => {
     if (!open) return
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     closeRef.current?.focus()
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
   }, [open])
 
   if (!open) return null

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+import { useCalendarScrollLock } from '../hooks/useCalendarScrollLock'
 
 export function CalendarDialog({
   title,
@@ -14,18 +15,14 @@ export function CalendarDialog({
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
+  useCalendarScrollLock(open)
   useEffect(() => {
     if (!open) return
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     const initialFocus = dialogRef.current?.querySelector<HTMLElement>(
       '[data-calendar-dialog-initial-focus]'
     )
     const focusTarget = initialFocus ?? closeRef.current
     focusTarget?.focus()
-    return () => {
-      document.body.style.overflow = previousOverflow
-    }
   }, [open])
   if (!open) return null
   function handleKeyDown(event: React.KeyboardEvent) {
