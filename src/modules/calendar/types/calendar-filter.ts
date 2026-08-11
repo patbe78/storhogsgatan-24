@@ -1,13 +1,21 @@
-export interface CalendarFilters {
-  participantIds: string[]
-  categoryIds: string[]
-  mineOnly: boolean
-  familyOnly: boolean
+export type CalendarFilterCategoryIdentity =
+  { kind: 'uncategorized' } | { kind: 'category'; categoryId: string }
+
+export interface CalendarFilterCell {
+  participantProfileId: string
+  category: CalendarFilterCategoryIdentity
 }
 
-export const EMPTY_CALENDAR_FILTERS: CalendarFilters = {
-  participantIds: [],
-  categoryIds: [],
-  mineOnly: false,
-  familyOnly: false
+export interface CalendarFilterMatrixValue {
+  selectedCells: CalendarFilterCell[]
+}
+
+export interface CalendarDefaultFilter extends CalendarFilterMatrixValue {
+  hasCustomDefault: boolean
+}
+
+export const UNCATEGORIZED_FILTER_CATEGORY = { kind: 'uncategorized' } as const
+
+export const EMPTY_CALENDAR_FILTER_MATRIX: CalendarFilterMatrixValue = {
+  selectedCells: []
 }

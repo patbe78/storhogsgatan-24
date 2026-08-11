@@ -110,10 +110,10 @@ test('månadsvyn navigerar, segmenterar, öppnar aktiviteter och filtrerar i rä
     )
   ).toBe(true)
 
-  await page.getByText('Kategorier', { exact: true }).click()
-  await page.getByLabel('Arbete').check()
+  await page.getByRole('button', { name: 'Avmarkera allt', exact: true }).click()
+  await page.getByLabel('Patrik – Arbete – döljs').check()
   await expect(page.getByRole('button', { name: /Vanligt möte/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Semesterresa.*Heldagsaktivitet/ })).toHaveCount(0)
-  await page.getByRole('button', { name: 'Rensa filter' }).click()
+  await page.getByRole('button', { name: 'Välj allt', exact: true }).click()
   await expect(page.getByRole('button', { name: /Semesterresa.*Heldagsaktivitet/ })).toHaveCount(2)
 })

@@ -57,7 +57,7 @@ test('månadsvyn använder mobilbredden utan overflow och har sticky rubrik', as
   expect(layout.overflow).toBeLessThanOrEqual(0)
 
   await page.getByRole('button', { name: 'Visa filter' }).click()
-  await expect(page.getByLabel('Kalenderfilter')).toBeVisible()
+  await expect(page.getByLabel('Filtermatris för kalender')).toBeVisible()
   await page.evaluate(() => window.scrollTo(0, 500))
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(250)
   const stickyTop = await page
