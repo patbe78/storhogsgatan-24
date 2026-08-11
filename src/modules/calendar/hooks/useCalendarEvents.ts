@@ -1,41 +1,30 @@
 import { useQuery } from '@tanstack/react-query'
-import type { CalendarFilters } from '../types/calendar-filter'
+import { useAuth } from '@/modules/auth'
+import type { CalendarFilterMatrixValue } from '../types/calendar-filter'
 import { generateOccurrences } from '../utils/calendar-recurrence'
 import { getCalendarEvents } from '../services/calendar-event.service'
+import {
+  eventMatchesCalendarFilter,
+  selectedCalendarFilterCellKeys
+} from '../utils/calendar-filter'
 
 export function useCalendarEvents(
   start: Date,
   end: Date,
-  filters: CalendarFilters,
-  profileId?: string
+  filters: CalendarFilterMatrixValue | null
 ) {
+  const { session } = useAuth()
+  const userId = session?.user.id
   return useQuery({
-    queryKey: ['calendar-events', start.toISOString(), end.toISOString()],
+    queryKey: ['calendar-events', userId, start.toISOString(), end.toISOString()],
     queryFn: () => getCalendarEvents(start, end),
-    select: (rows) =>
-      rows
+    enabled: Boolean(userId),
+    select: (rows) => {
+      if (!filters) return []
+      const selectedCells = selectedCalendarFilterCellKeys(filters)
+      return rows
         .flatMap(({ event, recurrence }) => generateOccurrences(event, recurrence, start, end))
-        .filter((occurrence) => {
-          const event = occurrence.event
-          if (
-            filters.mineOnly &&
-            (!profileId || !event.participants.some((person) => person.id === profileId))
-          )
-            return false
-          if (filters.familyOnly && !event.isFamilyEvent) return false
-          if (
-            filters.participantIds.length &&
-            !filters.participantIds.some((id) =>
-              event.participants.some((person) => person.id === id)
-            )
-          )
-            return false
-          if (
-            filters.categoryIds.length &&
-            (!event.categoryId || !filters.categoryIds.includes(event.categoryId))
-          )
-            return false
-          return true
-        })
+        .filter((occurrence) => eventMatchesCalendarFilter(occurrence.event, selectedCells))
+    }
   })
 }

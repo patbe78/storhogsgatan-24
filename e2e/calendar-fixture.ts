@@ -3,6 +3,19 @@ import { expect, type Page } from '@playwright/test'
 const userId = '11111111-1111-4111-8111-111111111111'
 const householdId = '24000000-0000-4000-8000-000000000024'
 const fixtureEventId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+export interface CalendarFixtureOptions {
+  role?: 'admin' | 'adult' | 'member' | 'guest'
+  isActive?: boolean
+  calendarEvents?: Array<Record<string, unknown>>
+  calendarCategories?: Array<Record<string, unknown>>
+  calendarProfiles?: Array<{ id: string; name: string; color: string | null }>
+  calendarSaveFailures?: number
+  calendarDefaultEntries?: Array<{
+    participant_profile_id: string
+    category_id: string | null
+  }> | null
+  calendarDefaultSaveFailures?: number
+}
 const user = {
   id: userId,
   aud: 'authenticated',
@@ -16,19 +29,15 @@ const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('b
 const jwt = () =>
   `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: userId, role: 'authenticated', aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 3600 })}.`
 
-export async function mockSupabase(
-  page: Page,
-  profileOptions: {
-    role?: 'admin' | 'adult' | 'member' | 'guest'
-    isActive?: boolean
-    calendarEvents?: Array<Record<string, unknown>>
-    calendarCategories?: Array<Record<string, unknown>>
-    calendarSaveFailures?: number
-  } = {}
-) {
+export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOptions = {}) {
   const calendarEvents = [...(profileOptions.calendarEvents ?? [])]
   const calendarCategories = [...(profileOptions.calendarCategories ?? [])]
+  const calendarProfiles = profileOptions.calendarProfiles ?? [
+    { id: userId, name: 'Patrik', color: '#2563eb' }
+  ]
+  let calendarDefaultEntries = profileOptions.calendarDefaultEntries
   let remainingSaveFailures = profileOptions.calendarSaveFailures ?? 0
+  let remainingDefaultSaveFailures = profileOptions.calendarDefaultSaveFailures ?? 0
   await page.route('**/auth/v1/**', async (route) => {
     const url = route.request().url()
     if (url.includes('/token'))
@@ -49,6 +58,22 @@ export async function mockSupabase(
     const url = request.url()
     if (url.includes('/rpc/calendar_events_in_range'))
       return route.fulfill({ json: calendarEvents })
+    if (url.includes('/rpc/calendar_list_active_profiles'))
+      return route.fulfill({ json: calendarProfiles })
+    if (url.includes('/rpc/calendar_replace_default_filter')) {
+      if (remainingDefaultSaveFailures > 0) {
+        remainingDefaultSaveFailures -= 1
+        return route.fulfill({
+          status: 400,
+          json: { code: 'P0001', message: 'Simulerat standardfilterfel' }
+        })
+      }
+      const body = request.postDataJSON() as {
+        p_entries: Array<{ participant_profile_id: string; category_id: string | null }>
+      }
+      calendarDefaultEntries = [...body.p_entries]
+      return route.fulfill({ json: null })
+    }
     if (url.includes('/rpc/calendar_save_event')) {
       if (remainingSaveFailures > 0) {
         remainingSaveFailures -= 1
@@ -99,6 +124,12 @@ export async function mockSupabase(
       else calendarEvents[index] = row
       return route.fulfill({ json: id })
     }
+    if (url.includes('/calendar_default_filter_entries'))
+      return route.fulfill({ json: calendarDefaultEntries ?? [] })
+    if (url.includes('/calendar_default_filters'))
+      return route.fulfill({
+        json: calendarDefaultEntries == null ? null : { user_id: userId }
+      })
     if (url.includes('/calendar_categories')) return route.fulfill({ json: calendarCategories })
     if (url.includes('/profiles')) {
       const profile = {
@@ -125,16 +156,7 @@ export async function mockSupabase(
   })
 }
 
-export async function login(
-  page: Page,
-  profileOptions: {
-    role?: 'admin' | 'adult' | 'member' | 'guest'
-    isActive?: boolean
-    calendarEvents?: Array<Record<string, unknown>>
-    calendarCategories?: Array<Record<string, unknown>>
-    calendarSaveFailures?: number
-  } = {}
-) {
+export async function login(page: Page, profileOptions: CalendarFixtureOptions = {}) {
   await mockSupabase(page, profileOptions)
   await page.goto('/login')
   await page.getByLabel('E-post').fill('patrik@test.invalid')

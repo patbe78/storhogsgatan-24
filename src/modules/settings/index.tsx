@@ -1,6 +1,7 @@
 import { PwaStatusPanel } from '@/modules/pwa'
 import { FamilyAdministration } from '@/modules/family'
 import { PushNotificationPanel } from '@/modules/notifications'
+import { CalendarDefaultFilterSettings } from '@/modules/calendar/components/CalendarDefaultFilterSettings'
 
 export function SettingsPage() {
   return (
@@ -10,6 +11,7 @@ export function SettingsPage() {
         <h1>Inställningar</h1>
         <p>Anpassa hur Storhogsgatan 24 fungerar på den här enheten.</p>
       </header>
+      <CalendarDefaultFilterSettings />
       <FamilyAdministration />
       <PwaStatusPanel />
       <PushNotificationPanel />

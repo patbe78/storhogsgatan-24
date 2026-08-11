@@ -13,6 +13,7 @@ import { occurrencesBefore, singleOccurrence } from '../utils/calendar-recurrenc
 import { checkCalendarConflicts } from '../services/calendar-conflict.service'
 import { useCalendarNavigation } from '../hooks/useCalendarNavigation'
 import { useCalendarFilters } from '../hooks/useCalendarFilters'
+import { useCalendarDefaultFilter } from '../hooks/useCalendarDefaultFilter'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { useCalendarProfiles } from '../hooks/useCalendarProfiles'
 import { useCalendarCategories } from '../hooks/useCalendarCategories'
@@ -20,7 +21,7 @@ import { useCalendarPermissions } from '../hooks/useCalendarPermissions'
 import { useCalendarMutations } from '../hooks/useCalendarMutations'
 import { useCalendarViewModel } from '../hooks/useCalendarViewModel'
 import { CalendarToolbar } from '../components/CalendarToolbar'
-import { CalendarFilters } from '../components/CalendarFilters'
+import { CalendarFilterMatrix } from '../components/CalendarFilterMatrix'
 import { CalendarMonthView } from '../components/CalendarMonthView'
 import { CalendarWeekView } from '../components/CalendarWeekView'
 import { CalendarDayView } from '../components/CalendarDayView'
@@ -41,17 +42,17 @@ type Mode = 'closed' | 'create' | 'details' | 'edit' | 'categories'
 export function CalendarPage() {
   const [params, setParams] = useSearchParams()
   const navigation = useCalendarNavigation(params.get('date'))
-  const filterState = useCalendarFilters()
   const permissions = useCalendarPermissions()
   const profiles = useCalendarProfiles()
   const categories = useCalendarCategories(true)
-  const range = calendarRange(navigation.view, navigation.anchor)
-  const events = useCalendarEvents(
-    range.start,
-    range.end,
-    filterState.filters,
-    permissions.profile?.id
+  const savedDefault = useCalendarDefaultFilter()
+  const filterState = useCalendarFilters(
+    savedDefault.isFetchedAfterMount ? savedDefault.data : undefined,
+    profiles.data,
+    categories.data
   )
+  const range = calendarRange(navigation.view, navigation.anchor)
+  const events = useCalendarEvents(range.start, range.end, filterState.filters)
   const model = useCalendarViewModel(navigation.view, navigation.anchor, events.data ?? [])
   const mutations = useCalendarMutations()
   const [mode, setMode] = useState<Mode>('closed')
@@ -268,13 +269,21 @@ export function CalendarPage() {
       <div className="calendar-layout">
         <main className="calendar-canvas">
           <CalendarStatus
-            loading={events.isLoading || profiles.isLoading || categories.isLoading}
-            error={events.isError || profiles.isError || categories.isError}
+            loading={
+              events.isLoading ||
+              profiles.isLoading ||
+              categories.isLoading ||
+              savedDefault.isLoading ||
+              !savedDefault.isFetchedAfterMount ||
+              !filterState.filters
+            }
+            error={events.isError || profiles.isError || categories.isError || savedDefault.isError}
             empty={!events.isLoading && !events.isError && (events.data?.length ?? 0) === 0}
             onRetry={() => {
               void events.refetch()
               void profiles.refetch()
               void categories.refetch()
+              void savedDefault.refetch()
             }}
           />
           {!events.isLoading && !events.isError && (
@@ -317,16 +326,14 @@ export function CalendarPage() {
           id="calendar-filter-panel"
           className={`calendar-filter-panel ${filtersOpen ? 'open' : ''}`}
         >
-          <CalendarFilters
-            filters={filterState.filters}
-            profiles={profiles.data ?? []}
-            categories={categories.data ?? []}
-            onParticipant={filterState.toggleParticipant}
-            onCategory={filterState.toggleCategory}
-            onMine={filterState.setMineOnly}
-            onFamily={filterState.setFamilyOnly}
-            onClear={filterState.clearFilters}
-          />
+          {filterState.filters && (
+            <CalendarFilterMatrix
+              members={profiles.data ?? []}
+              categories={categories.data ?? []}
+              value={filterState.filters}
+              onChange={filterState.setFilters}
+            />
+          )}
         </div>
       </section>
       {permissions.canManageCategories && (
