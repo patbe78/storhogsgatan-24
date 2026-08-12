@@ -16,7 +16,8 @@ const categories = [
     name: 'Arbete',
     icon: null,
     color: null,
-    isArchived: false
+    isArchived: false,
+    isSystem: true
   }
 ]
 

@@ -5,6 +5,7 @@ export interface CalendarCategory {
   icon: string | null
   color: string | null
   isArchived: boolean
+  isSystem: boolean
 }
 
 export interface CalendarCategoryInput {

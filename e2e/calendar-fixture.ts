@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test'
 
-const userId = '11111111-1111-4111-8111-111111111111'
-const householdId = '24000000-0000-4000-8000-000000000024'
+export const userId = '11111111-1111-4111-8111-111111111111'
+export const householdId = '24000000-0000-4000-8000-000000000024'
 const fixtureEventId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 export interface CalendarFixtureOptions {
   role?: 'admin' | 'adult' | 'member' | 'guest'
@@ -9,6 +9,13 @@ export interface CalendarFixtureOptions {
   calendarEvents?: Array<Record<string, unknown>>
   calendarCategories?: Array<Record<string, unknown>>
   calendarProfiles?: Array<{ id: string; name: string; color: string | null }>
+  dashboardProfiles?: Array<{
+    id: string
+    name: string
+    role: 'admin' | 'adult' | 'member' | 'guest'
+    color: string | null
+    is_active: boolean
+  }>
   calendarSaveFailures?: number
   calendarDefaultEntries?: Array<{
     participant_profile_id: string
@@ -34,6 +41,15 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
   const calendarCategories = [...(profileOptions.calendarCategories ?? [])]
   const calendarProfiles = profileOptions.calendarProfiles ?? [
     { id: userId, name: 'Patrik', color: '#2563eb' }
+  ]
+  const dashboardProfiles = profileOptions.dashboardProfiles ?? [
+    {
+      id: userId,
+      name: 'Patrik',
+      role: profileOptions.role ?? 'admin',
+      color: '#2563eb',
+      is_active: profileOptions.isActive ?? true
+    }
   ]
   let calendarDefaultEntries = profileOptions.calendarDefaultEntries
   let remainingSaveFailures = profileOptions.calendarSaveFailures ?? 0
@@ -149,7 +165,9 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
       return route.fulfill({
         json: url.includes('id=eq.')
           ? profile
-          : [{ id: profile.id, name: profile.name, color: profile.color }]
+          : url.includes('is_active=eq.true')
+            ? dashboardProfiles.filter((item) => item.is_active)
+            : [{ id: profile.id, name: profile.name, color: profile.color }]
       })
     }
     return route.fulfill({ json: [] })

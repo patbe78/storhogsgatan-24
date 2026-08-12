@@ -61,7 +61,8 @@ async function expectOverlayLocked(page: Page) {
 
 test.beforeEach(async ({ page }) => {
   await login(page)
-  await page.getByRole('main').getByRole('link', { name: 'Kalender' }).click()
+  await page.getByRole('button', { name: 'Öppna meny' }).click()
+  await page.getByRole('link', { name: 'Kalender' }).click()
 })
 
 test('A: deltagare och påminnelser kan stängas före create utan scroll-läckage', async ({
@@ -143,7 +144,8 @@ test('D: Avbryt, X och navigation med öppet sheet återställer scroll', async 
 
 test('E: create-fel följt av stängning lämnar sidan scrollbar', async ({ page }) => {
   await login(page, { calendarSaveFailures: 1 })
-  await page.getByRole('main').getByRole('link', { name: 'Kalender' }).click()
+  await page.getByRole('button', { name: 'Öppna meny' }).click()
+  await page.getByRole('link', { name: 'Kalender' }).click()
   const dialog = await openCreateDialog(page, 'Feltest')
   await dialog.getByRole('button', { name: 'Skapa aktivitet' }).click()
   await expect(page.getByRole('alert')).toContainText('Något gick fel')

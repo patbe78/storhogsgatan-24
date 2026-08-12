@@ -1,80 +1,191 @@
-import type { ReactNode } from 'react'
+import { useId, type CSSProperties, type ReactNode } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useUpcomingCalendarEvents } from '@/modules/calendar'
+import { occurrenceTimeLabel } from '@/modules/calendar/utils/calendar-display'
+import type { DashboardOccurrenceItem } from '../types/dashboard'
+import { dashboardOccurrenceDateLabel } from '../utils/dashboard-dates'
 import './dashboard-calendar.css'
-export function Widget({ title, children }: { title: string; children: ReactNode }) {
+
+export function Widget({
+  title,
+  className = '',
+  children
+}: {
+  title: string
+  className?: string
+  children: ReactNode
+}) {
+  const titleId = useId()
   return (
-    <section className="widget">
-      <h2>{title}</h2>
+    <section className={`widget dashboard-widget ${className}`} aria-labelledby={titleId}>
+      <h2 id={titleId}>{title}</h2>
       {children}
     </section>
   )
 }
-export function DateWidget() {
-  const today = new Intl.DateTimeFormat('sv-SE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  }).format(new Date())
+
+export function DateWidget({ label, weekNumber }: { label: string; weekNumber: number }) {
   return (
-    <Widget title="Idag">
-      <p className="date-value">{today}</p>
-    </Widget>
+    <section
+      className="widget dashboard-widget dashboard-widget--date"
+      aria-label="Datum och veckonummer"
+    >
+      <p className="dashboard-date">{label}</p>
+      <p className="dashboard-week">Vecka {weekNumber}</p>
+    </section>
   )
 }
-export function WeekWidget() {
-  const now = new Date()
-  const first = new Date(now.getFullYear(), 0, 1)
-  const week = Math.ceil(((now.getTime() - first.getTime()) / 86400000 + first.getDay() + 1) / 7)
+
+function ActivityList({
+  items,
+  showOwners = false
+}: {
+  items: DashboardOccurrenceItem[]
+  showOwners?: boolean
+}) {
   return (
-    <Widget title="Veckonummer">
-      <p className="metric">Vecka {week}</p>
-    </Widget>
-  )
-}
-export function FamilyWidget() {
-  return (
-    <Widget title="Familjen idag">
-      <p className="muted">Familjeöversikt kommer snart.</p>
-    </Widget>
-  )
-}
-export function EventsWidget({ profileId }: { profileId?: string }) {
-  const events = useUpcomingCalendarEvents(profileId, 5)
-  return (
-    <Widget title="Kommande aktiviteter">
-      {events.isLoading && profileId && <p className="muted">Laddar aktiviteter…</p>}
-      {events.isError && (
-        <p className="muted" role="alert">
-          Aktiviteterna kunde inte laddas.
-        </p>
-      )}
-      {events.data?.length === 0 && <p className="muted">Inga aktiviteter att visa ännu.</p>}
-      {events.data && events.data.length > 0 && (
-        <ul className="dashboard-events">
-          {events.data.map((item) => (
-            <li key={item.key} style={{ '--event-color': item.color } as React.CSSProperties}>
-              <Link to={`/kalender?event=${encodeURIComponent(item.key)}`}>
-                <strong>{item.title}</strong>
-                <span>
-                  {item.dateLabel} · {item.timeLabel}
+    <ul className="dashboard-events">
+      {items.map(({ occurrence, owners }) => {
+        const color = occurrence.event.categoryColor ?? owners[0]?.color ?? '#64748b'
+        return (
+          <li key={occurrence.key} style={{ '--event-color': color } as CSSProperties}>
+            <Link to={`/kalender?event=${encodeURIComponent(occurrence.key)}`}>
+              <span className="dashboard-event-date">
+                {dashboardOccurrenceDateLabel(occurrence)}
+              </span>
+              <strong>{occurrence.event.title}</strong>
+              <span className="dashboard-event-time">{occurrenceTimeLabel(occurrence)}</span>
+              {showOwners && (
+                <span className="dashboard-event-owners" aria-label="Tillhör">
+                  {owners.map((owner) => (
+                    <span className="dashboard-owner" key={owner.id}>
+                      <span
+                        className="dashboard-owner__color"
+                        style={{ backgroundColor: owner.color ?? '#64748b' }}
+                        aria-hidden="true"
+                      />
+                      {owner.name}
+                    </span>
+                  ))}
                 </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+              )}
+            </Link>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+function CardStatus({
+  isLoading,
+  isError,
+  empty,
+  hasItems
+}: {
+  isLoading: boolean
+  isError: boolean
+  empty: string
+  hasItems: boolean
+}) {
+  if (isLoading) return <p className="muted">Laddar aktiviteter…</p>
+  if (isError)
+    return (
+      <p className="muted" role="alert">
+        Aktiviteterna kunde inte laddas.
+      </p>
+    )
+  if (!hasItems) return <p className="muted dashboard-empty">{empty}</p>
+  return null
+}
+
+export function EventsWidget({
+  items,
+  isLoading,
+  isError
+}: {
+  items: DashboardOccurrenceItem[]
+  isLoading: boolean
+  isError: boolean
+}) {
+  return (
+    <Widget title="Mina kommande aktiviteter" className="dashboard-widget--upcoming">
+      <CardStatus
+        isLoading={isLoading}
+        isError={isError}
+        empty="Inga kommande aktiviteter de närmaste 14 dagarna."
+        hasItems={items.length > 0}
+      />
+      {!isLoading && !isError && items.length > 0 && <ActivityList items={items} />}
     </Widget>
   )
 }
-export function ShortcutsWidget() {
+
+function WeekControls({
+  cardName,
+  offset,
+  setOffset
+}: {
+  cardName: string
+  offset: 0 | 1
+  setOffset: (offset: 0 | 1) => void
+}) {
   return (
-    <Widget title="Snabbgenvägar">
-      <div className="shortcuts">
-        <Link to="/kalender">Kalender</Link>
-        <Link to="/tvattbokning">Boka tvätt</Link>
-        <Link to="/inkopslista">Inköpslista</Link>
-      </div>
+    <div className="dashboard-week-controls">
+      <button
+        type="button"
+        aria-label={`Visa aktuell vecka för ${cardName}`}
+        disabled={offset === 0}
+        onClick={() => setOffset(0)}
+      >
+        <ChevronLeft size={20} aria-hidden="true" />
+      </button>
+      <span>{offset === 0 ? 'Denna vecka' : 'Nästa vecka'}</span>
+      <button
+        type="button"
+        aria-label={`Visa nästa vecka för ${cardName}`}
+        disabled={offset === 1}
+        onClick={() => setOffset(1)}
+      >
+        <ChevronRight size={20} aria-hidden="true" />
+      </button>
+    </div>
+  )
+}
+
+export function WeeklyActivitiesWidget({
+  cardName,
+  weekNumber,
+  offset,
+  setOffset,
+  items,
+  empty,
+  showOwners = false,
+  isLoading,
+  isError
+}: {
+  cardName: string
+  weekNumber: number
+  offset: 0 | 1
+  setOffset: (offset: 0 | 1) => void
+  items: DashboardOccurrenceItem[]
+  empty: string
+  showOwners?: boolean
+  isLoading: boolean
+  isError: boolean
+}) {
+  return (
+    <Widget title={`${cardName} – Vecka ${weekNumber}`} className="dashboard-widget--weekly">
+      <WeekControls cardName={cardName} offset={offset} setOffset={setOffset} />
+      <CardStatus
+        isLoading={isLoading}
+        isError={isError}
+        empty={empty}
+        hasItems={items.length > 0}
+      />
+      {!isLoading && !isError && items.length > 0 && (
+        <ActivityList items={items} showOwners={showOwners} />
+      )}
     </Widget>
   )
 }
