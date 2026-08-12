@@ -4,7 +4,8 @@ import {
   dashboardDateLabel,
   dashboardIsoWeek,
   dashboardTodayRange,
-  dashboardWeekRange
+  dashboardWeekRange,
+  dashboardWeekdayLabel
 } from './utils/dashboard-dates'
 
 describe('dashboard dates', () => {
@@ -31,6 +32,14 @@ describe('dashboard dates', () => {
     expect(formatInTimeZone(range.end, CALENDAR_TIME_ZONE, 'yyyy-MM-dd HH:mm')).toBe(
       '2027-01-04 00:00'
     )
+  })
+
+  it('använder exakt svenska veckodagsförkortningar från måndag till söndag', () => {
+    expect(
+      Array.from({ length: 7 }, (_, index) =>
+        dashboardWeekdayLabel(new Date(`2026-08-${String(10 + index).padStart(2, '0')}T10:00:00Z`))
+      )
+    ).toEqual(['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön'])
   })
 
   it('gör idag till och med idag + 14 inkluderande med exklusiv slutgräns', () => {

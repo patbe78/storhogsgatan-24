@@ -4,7 +4,7 @@ import type { DashboardCategoryIdentity } from '../types/dashboard'
 
 export const DASHBOARD_CATEGORY_NAMES = {
   work: 'Arbete',
-  household: 'Hushållsarbete'
+  household: 'Hushållssysslor'
 } as const
 
 export function normalizeCategoryName(value: string | null | undefined): string {
@@ -30,6 +30,7 @@ export function eventMatchesCategory(
   event: CalendarEvent,
   identity: DashboardCategoryIdentity
 ): boolean {
-  if (event.categoryId && identity.ids.has(event.categoryId)) return true
+  if (!event.categoryId) return false
+  if (identity.ids.size > 0) return identity.ids.has(event.categoryId)
   return normalizeCategoryName(event.categoryName) === identity.canonicalName
 }

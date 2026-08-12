@@ -5,7 +5,7 @@ import { dashboardFixtureOptions } from './dashboard-fixture'
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 
 function card(page: Page, name: RegExp) {
-  return page.getByRole('heading', { name }).locator('..')
+  return page.getByRole('heading', { name }).locator('..').locator('..')
 }
 
 test('dashboard 2.0 fungerar på iPhone utan overflow eller scroll-lock', async ({ page }) => {
@@ -23,9 +23,24 @@ test('dashboard 2.0 fungerar på iPhone utan overflow eller scroll-lock', async 
   await expect(card(page, /^Mina kommande aktiviteter$/).getByRole('link')).toHaveCount(6)
   await expect(card(page, /^Mina arbetstider/)).toBeVisible()
   await expect(
-    card(page, /^Familjens arbetstider/).getByText('Felix', { exact: true })
+    card(page, /^Familjens arbetstider/)
+      .getByText('Felix', { exact: true })
+      .first()
   ).toBeVisible()
   await expect(card(page, /^Hushållsuppgifter/)).toBeVisible()
+
+  const compactFamily = card(page, /^Familjens arbetstider/)
+  const compactMetrics = await compactFamily.evaluate((element) => ({
+    height: element.getBoundingClientRect().height,
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    clippedRows: Array.from(
+      element.querySelectorAll<HTMLElement>('.dashboard-week-activities a')
+    ).filter((row) => row.scrollWidth > row.clientWidth).length
+  }))
+  expect(compactMetrics.height).toBeLessThan(650)
+  expect(compactMetrics.scrollWidth).toBeLessThanOrEqual(compactMetrics.clientWidth)
+  expect(compactMetrics.clippedRows).toBe(0)
 
   await card(page, /^Mina arbetstider/)
     .getByRole('button', { name: 'Visa nästa vecka för Mina arbetstider' })

@@ -45,7 +45,13 @@ export function useDashboardViewModel(profile: Profile | null) {
       offset: 0 | 1,
       items: ReturnType<typeof selectMyWorkActivities>,
       setOffset: (offset: 0 | 1) => void
-    ) => ({ offset, weekNumber: dashboardIsoWeek(now, offset), items, setOffset })
+    ) => ({
+      offset,
+      weekNumber: dashboardIsoWeek(now, offset),
+      range: dashboardWeekRange(now, offset),
+      items,
+      setOffset
+    })
 
     return {
       date: { label: dashboardDateLabel(now), weekNumber: dashboardIsoWeek(now) },

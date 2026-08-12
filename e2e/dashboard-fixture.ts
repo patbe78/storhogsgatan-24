@@ -2,6 +2,8 @@ import { householdId, userId, type CalendarFixtureOptions } from './calendar-fix
 
 export const childId = '33333333-3333-4333-8333-333333333333'
 export const adultId = '22222222-2222-4222-8222-222222222222'
+export const secondChildId = '44444444-4444-4444-8444-444444444444'
+export const thirdChildId = '55555555-5555-4555-8555-555555555555'
 export const workCategoryId = '10000000-0000-4000-8000-000000000001'
 export const householdCategoryId = '10000000-0000-4000-8000-000000000002'
 export const otherCategoryId = '10000000-0000-4000-8000-000000000003'
@@ -9,6 +11,8 @@ export const otherCategoryId = '10000000-0000-4000-8000-000000000003'
 const people = {
   current: { id: userId, name: 'Patrik', color: '#2563eb' },
   child: { id: childId, name: 'Felix', color: '#16a34a' },
+  secondChild: { id: secondChildId, name: 'Gustav', color: '#f59e0b' },
+  thirdChild: { id: thirdChildId, name: 'Alex', color: '#7c3aed' },
   adult: { id: adultId, name: 'Anna', color: '#db2777' }
 }
 
@@ -23,7 +27,7 @@ function row(
     categoryId === workCategoryId
       ? 'Arbete'
       : categoryId === householdCategoryId
-        ? 'Hushållsarbete'
+        ? 'Hushållssysslor'
         : categoryId === otherCategoryId
           ? 'Skola'
           : null
@@ -58,15 +62,41 @@ function row(
   }
 }
 
+function allDayRow(
+  id: string,
+  title: string,
+  allDayStart: string,
+  allDayEnd: string,
+  categoryId: string,
+  participants: (typeof people.child)[]
+): Record<string, unknown> {
+  return {
+    ...row(id, title, `${allDayStart}T00:00:00.000Z`, categoryId, participants),
+    starts_at: null,
+    ends_at: null,
+    all_day: true,
+    all_day_start: allDayStart,
+    all_day_end: allDayEnd
+  }
+}
+
 export function dashboardFixtureOptions(): CalendarFixtureOptions {
   return {
     role: 'admin',
     dashboardProfiles: [
       { ...people.current, role: 'admin', is_active: true },
       { ...people.adult, role: 'adult', is_active: true },
-      { ...people.child, role: 'member', is_active: true }
+      { ...people.child, role: 'member', is_active: true },
+      { ...people.secondChild, role: 'member', is_active: true },
+      { ...people.thirdChild, role: 'member', is_active: true }
     ],
-    calendarProfiles: [people.current, people.adult, people.child],
+    calendarProfiles: [
+      people.current,
+      people.adult,
+      people.child,
+      people.secondChild,
+      people.thirdChild
+    ],
     calendarCategories: [
       {
         id: workCategoryId,
@@ -80,7 +110,7 @@ export function dashboardFixtureOptions(): CalendarFixtureOptions {
       {
         id: householdCategoryId,
         household_id: householdId,
-        name: 'Hushållsarbete',
+        name: 'Hushållssysslor',
         icon: null,
         color: '#16a34a',
         is_archived: false,
@@ -105,10 +135,18 @@ export function dashboardFixtureOptions(): CalendarFixtureOptions {
       row('upcoming-5', 'Aktivitet fem', '2026-08-15T12:00:00.000Z', otherCategoryId),
       row('upcoming-6', 'Aktivitet sex', '2026-08-16T12:00:00.000Z', otherCategoryId),
       row('upcoming-7', 'Aktivitet sju', '2026-08-17T12:00:00.000Z', otherCategoryId),
-      row('my-work', 'Mitt jobb', '2026-08-12T05:00:00.000Z', workCategoryId),
-      row('my-work-next', 'Mitt jobb nästa', '2026-08-18T05:00:00.000Z', workCategoryId),
-      row('child-work', 'Felix sommarjobb', '2026-08-13T06:00:00.000Z', workCategoryId, [
-        people.child
+      row('my-work', 'Jobb', '2026-08-12T05:00:00.000Z', workCategoryId),
+      row('my-work-next', 'Nattjour', '2026-08-18T19:00:00.000Z', workCategoryId),
+      ...[10, 11, 12, 13, 14].flatMap((day) => [
+        row(`felix-work-${day}`, 'Jobb', `2026-08-${day}T03:30:00.000Z`, workCategoryId, [
+          people.child
+        ]),
+        row(`gustav-work-${day}`, 'Jobb', `2026-08-${day}T04:00:00.000Z`, workCategoryId, [
+          people.secondChild
+        ])
+      ]),
+      allDayRow('alex-leave', 'Sjukskriven', '2026-08-10', '2026-08-14', workCategoryId, [
+        people.thirdChild
       ]),
       row('adult-work', 'Annas jobb', '2026-08-13T07:00:00.000Z', workCategoryId, [people.adult]),
       row('household-now', 'Städa köket', '2026-08-14T16:00:00.000Z', householdCategoryId),

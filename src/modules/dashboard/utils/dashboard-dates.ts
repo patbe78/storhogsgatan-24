@@ -67,6 +67,12 @@ export function dashboardOccurrenceDateLabel(occurrence: CalendarOccurrence): st
   return `${startLabel}–${capitalize(formatter.format(endForDisplay))}`
 }
 
+export function dashboardWeekdayLabel(date: Date | string): string {
+  const labels = ['Mån', 'Tis', 'Ons', 'Tor', 'Fre', 'Lör', 'Sön']
+  const isoWeekday = Number(formatInTimeZone(date, CALENDAR_TIME_ZONE, 'i'))
+  return labels[isoWeekday - 1]
+}
+
 export function intervalsOverlap(
   startsAt: string,
   endsAt: string,

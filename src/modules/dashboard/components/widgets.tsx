@@ -2,23 +2,29 @@ import { useId, type CSSProperties, type ReactNode } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { occurrenceTimeLabel } from '@/modules/calendar/utils/calendar-display'
-import type { DashboardOccurrenceItem } from '../types/dashboard'
+import type { DashboardDateRange, DashboardOccurrenceItem } from '../types/dashboard'
 import { dashboardOccurrenceDateLabel } from '../utils/dashboard-dates'
+import { groupDashboardWeekActivities, isGenericWorkTitle } from '../utils/dashboard-week-groups'
 import './dashboard-calendar.css'
 
 export function Widget({
   title,
   className = '',
+  headerActions,
   children
 }: {
   title: string
   className?: string
+  headerActions?: ReactNode
   children: ReactNode
 }) {
   const titleId = useId()
   return (
     <section className={`widget dashboard-widget ${className}`} aria-labelledby={titleId}>
-      <h2 id={titleId}>{title}</h2>
+      <div className="dashboard-widget__header">
+        <h2 id={titleId}>{title}</h2>
+        {headerActions}
+      </div>
       {children}
     </section>
   )
@@ -131,7 +137,7 @@ function WeekControls({
   setOffset: (offset: 0 | 1) => void
 }) {
   return (
-    <div className="dashboard-week-controls">
+    <div className="dashboard-week-controls" aria-label={`Veckonavigering för ${cardName}`}>
       <button
         type="button"
         aria-label={`Visa aktuell vecka för ${cardName}`}
@@ -140,7 +146,6 @@ function WeekControls({
       >
         <ChevronLeft size={20} aria-hidden="true" />
       </button>
-      <span>{offset === 0 ? 'Denna vecka' : 'Nästa vecka'}</span>
       <button
         type="button"
         aria-label={`Visa nästa vecka för ${cardName}`}
@@ -153,30 +158,103 @@ function WeekControls({
   )
 }
 
+function compactActivityLabel(
+  item: DashboardOccurrenceItem,
+  activityType: 'work' | 'household'
+): string {
+  const { occurrence } = item
+  const showTitle = activityType === 'household' || !isGenericWorkTitle(occurrence.event.title)
+  return [showTitle ? occurrence.event.title : null, occurrenceTimeLabel(occurrence)]
+    .filter(Boolean)
+    .join(' · ')
+}
+
+function CompactWeekList({
+  items,
+  range,
+  showOwners,
+  activityType
+}: {
+  items: DashboardOccurrenceItem[]
+  range: DashboardDateRange
+  showOwners: boolean
+  activityType: 'work' | 'household'
+}) {
+  const groups = groupDashboardWeekActivities(items, range)
+
+  return (
+    <div className="dashboard-week-groups">
+      {groups.map((group) => (
+        <section className="dashboard-week-group" key={group.key}>
+          <h3>{group.label}</h3>
+          <ul className="dashboard-week-activities">
+            {group.items.map((item) => {
+              const { occurrence, owners } = item
+              const detail = compactActivityLabel(item, activityType)
+              const ownerNames = owners.map((owner) => owner.name).join(', ')
+              return (
+                <li key={occurrence.key}>
+                  <Link
+                    to={`/kalender?event=${encodeURIComponent(occurrence.key)}`}
+                    aria-label={[showOwners ? ownerNames : null, detail].filter(Boolean).join(', ')}
+                  >
+                    {showOwners && (
+                      <span className="dashboard-week-owners">
+                        {owners.map((owner) => (
+                          <span className="dashboard-week-owner" key={owner.id}>
+                            <span
+                              className="dashboard-week-owner__color"
+                              style={{ backgroundColor: owner.color ?? '#64748b' }}
+                              aria-hidden="true"
+                            />
+                            <span>{owner.name}</span>
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                    <span className="dashboard-week-activity-detail">{detail}</span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
+  )
+}
+
 export function WeeklyActivitiesWidget({
   cardName,
   weekNumber,
+  range,
   offset,
   setOffset,
   items,
   empty,
   showOwners = false,
+  activityType,
   isLoading,
   isError
 }: {
   cardName: string
   weekNumber: number
+  range: DashboardDateRange
   offset: 0 | 1
   setOffset: (offset: 0 | 1) => void
   items: DashboardOccurrenceItem[]
   empty: string
   showOwners?: boolean
+  activityType: 'work' | 'household'
   isLoading: boolean
   isError: boolean
 }) {
   return (
-    <Widget title={`${cardName} – Vecka ${weekNumber}`} className="dashboard-widget--weekly">
-      <WeekControls cardName={cardName} offset={offset} setOffset={setOffset} />
+    <Widget
+      title={`${cardName} – Vecka ${weekNumber}`}
+      className="dashboard-widget--weekly"
+      headerActions={<WeekControls cardName={cardName} offset={offset} setOffset={setOffset} />}
+    >
       <CardStatus
         isLoading={isLoading}
         isError={isError}
@@ -184,7 +262,12 @@ export function WeeklyActivitiesWidget({
         hasItems={items.length > 0}
       />
       {!isLoading && !isError && items.length > 0 && (
-        <ActivityList items={items} showOwners={showOwners} />
+        <CompactWeekList
+          items={items}
+          range={range}
+          showOwners={showOwners}
+          activityType={activityType}
+        />
       )}
     </Widget>
   )

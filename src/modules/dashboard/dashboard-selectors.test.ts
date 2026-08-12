@@ -67,7 +67,7 @@ const categories: CalendarCategory[] = [
   {
     id: householdCategoryId,
     householdId,
-    name: 'Hushållsarbete',
+    name: 'Hushållssysslor',
     icon: null,
     color: '#16a34a',
     isArchived: false,
@@ -108,7 +108,7 @@ function timed(
         categoryId === workCategoryId
           ? 'Arbete'
           : categoryId === householdCategoryId
-            ? 'Hushållsarbete'
+            ? 'Hushållssysslor'
             : categoryId === otherCategoryId
               ? 'Skola'
               : null,
@@ -146,6 +146,40 @@ describe('dashboard selectors', () => {
         (item) => item.occurrence.event.title
       )
     ).toEqual(['stabilt arbete'])
+  })
+
+  it('filtrerar på Hushållssysslors ID och exkluderar annan kategori samt category_id NULL', () => {
+    const householdTask = timed('Dammsuga', '2026-08-11T16:00:00.000Z', householdCategoryId)
+    householdTask.event.categoryName = 'Äldre visningsnamn'
+    const wrongCategory = timed('Skolarbete', '2026-08-11T17:00:00.000Z', otherCategoryId)
+    const noCategory = timed('Okategoriserad', '2026-08-11T18:00:00.000Z', null)
+    noCategory.event.categoryName = 'Hushållssysslor'
+
+    expect(
+      selectHouseholdActivities(
+        [householdTask, wrongCategory, noCategory],
+        current,
+        household,
+        dashboardWeekRange(now, 0)
+      ).map((item) => item.occurrence.event.title)
+    ).toEqual(['Dammsuga'])
+  })
+
+  it('exkluderar Hushållssysslor från Mina kommande aktiviteter', () => {
+    const occurrences = [
+      timed('Hushållsuppgift', '2026-08-11T16:00:00.000Z', householdCategoryId),
+      timed('Skolaktivitet', '2026-08-11T17:00:00.000Z', otherCategoryId)
+    ]
+
+    expect(
+      selectUpcomingPersonalActivities(
+        occurrences,
+        current,
+        dashboardTodayRange(now),
+        work,
+        household
+      ).map((item) => item.occurrence.event.title)
+    ).toEqual(['Skolaktivitet'])
   })
 
   it('inkluderar idag och idag + 14 men exkluderar + 15 och avslutade event', () => {

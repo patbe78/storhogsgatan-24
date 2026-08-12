@@ -24,6 +24,7 @@ export function DashboardPage() {
           cardName="Mina arbetstider"
           {...dashboard.myWork}
           empty="Inga arbetstider denna vecka."
+          activityType="work"
           isLoading={dashboard.isLoading}
           isError={dashboard.isError}
         />
@@ -32,6 +33,7 @@ export function DashboardPage() {
           {...dashboard.familyWork}
           empty="Inga arbetstider denna vecka."
           showOwners
+          activityType="work"
           isLoading={dashboard.isLoading}
           isError={dashboard.isError}
         />
@@ -39,6 +41,7 @@ export function DashboardPage() {
           cardName="Hushållsuppgifter"
           {...dashboard.household}
           empty="Inga hushållsuppgifter denna vecka."
+          activityType="household"
           isLoading={dashboard.isLoading}
           isError={dashboard.isError}
         />
