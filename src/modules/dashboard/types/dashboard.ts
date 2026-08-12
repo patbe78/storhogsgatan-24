@@ -17,3 +17,9 @@ export interface DashboardDateRange {
   start: Date
   end: Date
 }
+
+export interface DashboardWeekGroup {
+  key: string
+  label: string
+  items: DashboardOccurrenceItem[]
+}
