@@ -19,7 +19,8 @@ describe('CalendarCategoryManager', () => {
               name: 'Arbete',
               icon: 'briefcase',
               color: '#123456',
-              isArchived: false
+              isArchived: false,
+              isSystem: true
             }
           ]}
         />

@@ -43,7 +43,8 @@ test('skapar, öppnar och redigerar aktivitet med duration och flera reminders',
       }
     ]
   })
-  await page.getByRole('main').getByRole('link', { name: 'Kalender' }).click()
+  await page.getByRole('button', { name: 'Öppna meny' }).click()
+  await page.getByRole('link', { name: 'Kalender' }).click()
   await page.getByRole('button', { name: /Ny aktivitet/ }).click()
   const createDialog = page.getByRole('dialog', { name: 'Ny aktivitet' })
   await expectRecurrenceAligned(createDialog)

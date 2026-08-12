@@ -9,7 +9,7 @@ function client() {
 export async function getCalendarCategories(includeArchived = true): Promise<CalendarCategory[]> {
   let query = client()
     .from('calendar_categories')
-    .select('id,household_id,name,icon,color,is_archived')
+    .select('id,household_id,name,icon,color,is_archived,is_system')
     .order('name')
   if (!includeArchived) query = query.eq('is_archived', false)
   const { data, error } = await query
@@ -20,7 +20,8 @@ export async function getCalendarCategories(includeArchived = true): Promise<Cal
     name: row.name,
     icon: row.icon,
     color: row.color,
-    isArchived: row.is_archived
+    isArchived: row.is_archived,
+    isSystem: row.is_system
   }))
 }
 

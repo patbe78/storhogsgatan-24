@@ -1,58 +1,58 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { vi } from 'vitest'
 import { DashboardPage } from './index'
 
-vi.mock('@/shared/services/profile', () => ({
-  getCurrentProfile: vi.fn()
-}))
-vi.mock('@/modules/calendar', () => ({
-  useUpcomingCalendarEvents: () => ({ data: [], isLoading: false, isError: false })
-}))
+const setOffset = vi.fn()
 
-import { getCurrentProfile } from '@/shared/services/profile'
-
-const mockedGetCurrentProfile = vi.mocked(getCurrentProfile)
+vi.mock('./hooks/use-current-profile', () => ({
+  useCurrentProfile: () => ({ id: 'profile-1', name: 'Patrik' })
+}))
+vi.mock('./hooks/use-dashboard-view-model', () => ({
+  useDashboardViewModel: () => ({
+    date: { label: 'Tisdag 11 Augusti', weekNumber: 33 },
+    upcoming: [],
+    myWork: { offset: 0, weekNumber: 33, items: [], setOffset },
+    familyWork: { offset: 0, weekNumber: 33, items: [], setOffset },
+    household: { offset: 0, weekNumber: 33, items: [], setOffset },
+    isLoading: false,
+    isError: false
+  })
+}))
 
 describe('DashboardPage', () => {
-  afterEach(() => {
-    mockedGetCurrentProfile.mockReset()
-  })
-
-  it('visar dashboardens grundwidgetar', () => {
-    mockedGetCurrentProfile.mockResolvedValue(null)
-
-    render(
-      <BrowserRouter>
-        <DashboardPage />
-      </BrowserRouter>
-    )
-    expect(screen.getByRole('heading', { name: 'Välkommen' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Idag' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Veckonummer' })).toBeInTheDocument()
-  })
-
-  it('visar profilens namn i välkomsthälsningen', async () => {
-    mockedGetCurrentProfile.mockResolvedValue({
-      id: '123',
-      name: 'Patrik',
-      email: 'patrik@example.com',
-      role: 'member',
-      avatar_url: null,
-      color: null,
-      household_id: '24000000-0000-4000-8000-000000000024',
-      created_at: '2026-08-03T00:00:00.000Z',
-      updated_at: '2026-08-03T00:00:00.000Z'
-    })
-
+  it('renderar exakt de fem dashboardsektionerna i rätt ordning', () => {
     render(
       <BrowserRouter>
         <DashboardPage />
       </BrowserRouter>
     )
 
-    await waitFor(() => {
-      expect(screen.getByRole('heading', { name: 'Välkommen Patrik' })).toBeInTheDocument()
-    })
+    expect(screen.getByRole('heading', { name: 'Välkommen Patrik' })).toBeInTheDocument()
+    const sections = Array.from(document.querySelectorAll<HTMLElement>('.dashboard-widget'))
+    expect(
+      sections.map((section) => section.getAttribute('aria-label') ?? section.textContent)
+    ).toEqual([
+      'Datum och veckonummer',
+      expect.stringContaining('Mina kommande aktiviteter'),
+      expect.stringContaining('Mina arbetstider – Vecka 33'),
+      expect.stringContaining('Familjens arbetstider – Vecka 33'),
+      expect.stringContaining('Hushållsuppgifter – Vecka 33')
+    ])
+    expect(screen.getByText('Tisdag 11 Augusti')).toBeInTheDocument()
+    expect(screen.getByText('Vecka 33', { selector: '.dashboard-week' })).toBeInTheDocument()
+  })
+
+  it('har tagit bort de gamla dashboardkorten och snabbgenvägarna', () => {
+    render(
+      <BrowserRouter>
+        <DashboardPage />
+      </BrowserRouter>
+    )
+    expect(screen.queryByRole('heading', { name: 'Idag' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Veckonummer' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Familjen idag' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Snabbgenvägar' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Familjeöversikt kommer snart.')).not.toBeInTheDocument()
   })
 })

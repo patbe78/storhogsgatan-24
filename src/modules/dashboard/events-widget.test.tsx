@@ -1,30 +1,42 @@
 import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import { vi } from 'vitest'
+import { singleOccurrence } from '@/modules/calendar/utils/calendar-recurrence'
+import { event, patrik } from '@/modules/calendar/tests/fixtures'
 import { EventsWidget } from './components/widgets'
+import type { DashboardOccurrenceItem } from './types/dashboard'
 
-vi.mock('@/modules/calendar', () => ({
-  useUpcomingCalendarEvents: () => ({
-    isLoading: false,
-    isError: false,
-    data: Array.from({ length: 5 }, (_, index) => ({
-      key: `event-${index}`,
-      title: `Aktivitet ${index + 1}`,
-      dateLabel: `${10 + index} aug.`,
-      timeLabel: index === 0 ? 'Heldag' : '18:00–19:00',
-      color: '#2563eb'
-    }))
-  })
-}))
+function items(count: number): DashboardOccurrenceItem[] {
+  return Array.from({ length: count }, (_, index) => ({
+    occurrence: singleOccurrence(
+      event({
+        id: `event-${index}`,
+        title: `Aktivitet ${index + 1}`,
+        startsAt: `2026-08-${String(11 + index).padStart(2, '0')}T16:00:00.000Z`,
+        endsAt: `2026-08-${String(11 + index).padStart(2, '0')}T17:00:00.000Z`
+      })
+    ),
+    owners: [patrik]
+  }))
+}
 
 describe('EventsWidget', () => {
-  it('visar fem kommande aktiviteter via kalenderns publika hook', () => {
+  it('visar högst sex redan selekterade kommande aktiviteter', () => {
     render(
       <BrowserRouter>
-        <EventsWidget profileId="profile-1" />
+        <EventsWidget items={items(6)} isLoading={false} isError={false} />
       </BrowserRouter>
     )
-    expect(screen.getAllByRole('link', { name: /Aktivitet/ })).toHaveLength(5)
-    expect(screen.getByText(/Heldag/)).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /Aktivitet/ })).toHaveLength(6)
+  })
+
+  it('renderar tydligt tomläge', () => {
+    render(
+      <BrowserRouter>
+        <EventsWidget items={[]} isLoading={false} isError={false} />
+      </BrowserRouter>
+    )
+    expect(
+      screen.getByText('Inga kommande aktiviteter de närmaste 14 dagarna.')
+    ).toBeInTheDocument()
   })
 })

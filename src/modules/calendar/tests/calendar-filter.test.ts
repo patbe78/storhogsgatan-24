@@ -22,7 +22,8 @@ const work: CalendarCategory = {
   name: 'Arbete',
   icon: null,
   color: null,
-  isArchived: false
+  isArchived: false,
+  isSystem: true
 }
 const school: CalendarCategory = {
   ...work,

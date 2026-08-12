@@ -5,7 +5,8 @@ test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true
 
 test('horisontellt svep byter månad men vertikal rörelse gör det inte', async ({ page }) => {
   await login(page)
-  await page.getByRole('main').getByRole('link', { name: 'Kalender' }).click()
+  await page.getByRole('button', { name: 'Öppna meny' }).click()
+  await page.getByRole('link', { name: 'Kalender' }).click()
   const heading = page.locator('.calendar-toolbar h1')
   const initial = await heading.textContent()
   const surface = page.locator('.calendar-swipe-surface')
