@@ -4,6 +4,7 @@ export const userId = '11111111-1111-4111-8111-111111111111'
 export const householdId = '24000000-0000-4000-8000-000000000024'
 const fixtureEventId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 export interface CalendarFixtureOptions {
+  currentUser?: { id: string; name: string; email: string; color: string | null }
   role?: 'admin' | 'adult' | 'member' | 'guest'
   isActive?: boolean
   calendarEvents?: Array<Record<string, unknown>>
@@ -23,31 +24,37 @@ export interface CalendarFixtureOptions {
   }> | null
   calendarDefaultSaveFailures?: number
 }
-const user = {
-  id: userId,
-  aud: 'authenticated',
-  role: 'authenticated',
-  email: 'patrik@test.invalid',
-  app_metadata: {},
-  user_metadata: {},
-  created_at: '2026-01-01T00:00:00Z'
-}
 const encode = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url')
-const jwt = () =>
-  `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: userId, role: 'authenticated', aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 3600 })}.`
+const jwt = (id: string) =>
+  `${encode({ alg: 'none', typ: 'JWT' })}.${encode({ sub: id, role: 'authenticated', aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 3600 })}.`
 
 export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOptions = {}) {
+  const current = profileOptions.currentUser ?? {
+    id: userId,
+    name: 'Patrik',
+    email: 'patrik@test.invalid',
+    color: '#2563eb'
+  }
+  const user = {
+    id: current.id,
+    aud: 'authenticated',
+    role: 'authenticated',
+    email: current.email,
+    app_metadata: {},
+    user_metadata: {},
+    created_at: '2026-01-01T00:00:00Z'
+  }
   const calendarEvents = [...(profileOptions.calendarEvents ?? [])]
   const calendarCategories = [...(profileOptions.calendarCategories ?? [])]
   const calendarProfiles = profileOptions.calendarProfiles ?? [
-    { id: userId, name: 'Patrik', color: '#2563eb' }
+    { id: current.id, name: current.name, color: current.color }
   ]
   const dashboardProfiles = profileOptions.dashboardProfiles ?? [
     {
-      id: userId,
-      name: 'Patrik',
+      id: current.id,
+      name: current.name,
       role: profileOptions.role ?? 'admin',
-      color: '#2563eb',
+      color: current.color,
       is_active: profileOptions.isActive ?? true
     }
   ]
@@ -59,7 +66,7 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
     if (url.includes('/token'))
       return route.fulfill({
         json: {
-          access_token: jwt(),
+          access_token: jwt(current.id),
           token_type: 'bearer',
           expires_in: 3600,
           refresh_token: 'refresh-test',
@@ -76,6 +83,8 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
       return route.fulfill({ json: calendarEvents })
     if (url.includes('/rpc/calendar_list_active_profiles'))
       return route.fulfill({ json: calendarProfiles })
+    if (url.includes('/rpc/dashboard_list_active_profiles'))
+      return route.fulfill({ json: dashboardProfiles })
     if (url.includes('/rpc/calendar_replace_default_filter')) {
       if (remainingDefaultSaveFailures > 0) {
         remainingDefaultSaveFailures -= 1
@@ -116,8 +125,8 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
         category_id: payload.categoryId || null,
         category_name: category?.name ?? null,
         category_color: category?.color ?? null,
-        created_by: previous?.created_by ?? userId,
-        updated_by: userId,
+        created_by: previous?.created_by ?? current.id,
+        updated_by: current.id,
         starts_at: payload.startsAt ?? null,
         ends_at: payload.endsAt ?? null,
         all_day: payload.allDay,
@@ -130,7 +139,7 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
         external_source: payload.externalSource || null,
         external_id: payload.externalId || null,
         recurrence_series_id: previous?.recurrence_series_id ?? null,
-        participants: [{ id: userId, name: 'Patrik', color: '#2563eb' }],
+        participants: [{ id: current.id, name: current.name, color: current.color }],
         recurrence: null,
         created_at: previous?.created_at ?? '2026-08-09T00:00:00.000Z',
         updated_at: '2026-08-09T00:00:00.000Z'
@@ -149,16 +158,16 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
     if (url.includes('/calendar_categories')) return route.fulfill({ json: calendarCategories })
     if (url.includes('/profiles')) {
       const profile = {
-        id: userId,
-        name: 'Patrik',
+        id: current.id,
+        name: current.name,
         email: user.email,
         role: profileOptions.role ?? 'admin',
         avatar_url: null,
-        color: '#2563eb',
+        color: current.color,
         household_id: householdId,
         is_active: profileOptions.isActive ?? true,
         deactivated_at: profileOptions.isActive === false ? '2026-08-06T00:00:00Z' : null,
-        deactivated_by: profileOptions.isActive === false ? userId : null,
+        deactivated_by: profileOptions.isActive === false ? current.id : null,
         created_at: '',
         updated_at: ''
       }
@@ -176,11 +185,15 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
 
 export async function login(page: Page, profileOptions: CalendarFixtureOptions = {}) {
   await mockSupabase(page, profileOptions)
+  const current = profileOptions.currentUser ?? {
+    name: 'Patrik',
+    email: 'patrik@test.invalid'
+  }
   await page.goto('/login')
-  await page.getByLabel('E-post').fill('patrik@test.invalid')
+  await page.getByLabel('E-post').fill(current.email)
   await page.getByLabel('Lösenord').fill('testlösenord')
   await page.getByRole('button', { name: 'Logga in' }).click()
-  await expect(page.getByRole('heading', { name: 'Välkommen Patrik' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: `Välkommen ${current.name}` })).toBeVisible()
   const onboarding = page.getByRole('dialog', { name: 'Se familjens kalender' })
   if (await onboarding.isVisible()) {
     await onboarding.getByRole('button', { name: 'Hoppa över', exact: true }).click()

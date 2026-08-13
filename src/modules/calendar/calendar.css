@@ -924,6 +924,16 @@
     z-index: 30;
     box-shadow: 0 8px 24px #1018283d;
   }
+  .calendar-page {
+    padding-bottom: calc(76px + var(--safe-bottom));
+  }
+  .calendar-filter-section,
+  .manage-categories {
+    scroll-margin-bottom: calc(76px + var(--safe-bottom));
+  }
+  .mobile-filter-button {
+    min-height: 44px;
+  }
   .calendar-filter-matrix {
     padding: 10px;
   }
