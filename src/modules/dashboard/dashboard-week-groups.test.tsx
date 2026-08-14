@@ -70,6 +70,20 @@ describe('dashboardens kompakta veckogrupper', () => {
     expect(groups[0].label).toBe('Mån–Fre')
   })
 
+  it('grupperar ett tidsatt nattpass enbart på startdagen men behåller sluttiden', () => {
+    const overnight = timed(
+      'night',
+      'Nattjour',
+      '2026-08-14T19:30:00.000Z',
+      '2026-08-15T03:30:00.000Z'
+    )
+    const groups = groupDashboardWeekActivities([overnight], range)
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0].label).toBe('Fre')
+    expect(groups[0].label).not.toBe('Fre–Lör')
+  })
+
   it('renderar kompakta rader, döljer Jobb och behåller titel, heldag, namn och profilfärg', () => {
     const setOffset = vi.fn()
     render(
@@ -96,14 +110,14 @@ describe('dashboardens kompakta veckogrupper', () => {
 
     const card = screen
       .getByRole('heading', {
-        name: 'Familjens arbetstider – Vecka 33'
+        name: 'Familjens arbetstider · V33'
       })
       .closest('section')!
     expect(
       within(card)
         .getAllByRole('heading', { level: 3 })
         .map((heading) => heading.textContent)
-    ).toEqual(['Mån', 'Tis–Ons', 'Tor'])
+    ).toEqual(['Mån', 'Tis', 'Tor'])
     expect(within(card).queryByText('Jobb')).not.toBeInTheDocument()
     expect(within(card).getByText('05:30–13:30')).toBeInTheDocument()
     expect(within(card).getByText('Nattjour · 21:00–07:00')).toBeInTheDocument()
@@ -118,5 +132,39 @@ describe('dashboardens kompakta veckogrupper', () => {
     expect(
       within(card).getByRole('button', { name: 'Visa aktuell vecka för Familjens arbetstider' })
     ).toBeDisabled()
+  })
+
+  it('visar bara dag och titel för Hushållsuppgifter', () => {
+    render(
+      <BrowserRouter>
+        <WeeklyActivitiesWidget
+          cardName="Hushållsuppgifter"
+          weekNumber={33}
+          range={range}
+          offset={0}
+          setOffset={vi.fn()}
+          items={[
+            timed(
+              'waste',
+              'Sophämtning tunna 1',
+              '2026-08-13T04:00:00.000Z',
+              '2026-08-13T15:00:00.000Z'
+            )
+          ]}
+          empty="Inga hushållsuppgifter denna vecka."
+          activityType="household"
+          isLoading={false}
+          isError={false}
+        />
+      </BrowserRouter>
+    )
+
+    const card = screen
+      .getByRole('heading', { name: 'Hushållsuppgifter · V33' })
+      .closest('section')!
+    expect(within(card).getByRole('heading', { level: 3 })).toHaveTextContent('Tor')
+    expect(within(card).getByText('Sophämtning tunna 1')).toBeInTheDocument()
+    expect(within(card).queryByText('06:00–17:00')).not.toBeInTheDocument()
+    expect(within(card).queryByText('Heldag')).not.toBeInTheDocument()
   })
 })

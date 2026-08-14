@@ -37,7 +37,7 @@ export function DateWidget({ label, weekNumber }: { label: string; weekNumber: n
       aria-label="Datum och veckonummer"
     >
       <p className="dashboard-date">{label}</p>
-      <p className="dashboard-week">Vecka {weekNumber}</p>
+      <p className="dashboard-week">V{weekNumber}</p>
     </section>
   )
 }
@@ -144,7 +144,9 @@ function WeekControls({
         disabled={offset === 0}
         onClick={() => setOffset(0)}
       >
-        <ChevronLeft size={20} aria-hidden="true" />
+        <span className="dashboard-week-control__visual">
+          <ChevronLeft size={18} aria-hidden="true" />
+        </span>
       </button>
       <button
         type="button"
@@ -152,7 +154,9 @@ function WeekControls({
         disabled={offset === 1}
         onClick={() => setOffset(1)}
       >
-        <ChevronRight size={20} aria-hidden="true" />
+        <span className="dashboard-week-control__visual">
+          <ChevronRight size={18} aria-hidden="true" />
+        </span>
       </button>
     </div>
   )
@@ -163,7 +167,8 @@ function compactActivityLabel(
   activityType: 'work' | 'household'
 ): string {
   const { occurrence } = item
-  const showTitle = activityType === 'household' || !isGenericWorkTitle(occurrence.event.title)
+  if (activityType === 'household') return occurrence.event.title
+  const showTitle = !isGenericWorkTitle(occurrence.event.title)
   return [showTitle ? occurrence.event.title : null, occurrenceTimeLabel(occurrence)]
     .filter(Boolean)
     .join(' · ')
@@ -251,7 +256,7 @@ export function WeeklyActivitiesWidget({
 }) {
   return (
     <Widget
-      title={`${cardName} – Vecka ${weekNumber}`}
+      title={`${cardName} · V${weekNumber}`}
       className="dashboard-widget--weekly"
       headerActions={<WeekControls cardName={cardName} offset={offset} setOffset={setOffset} />}
     >

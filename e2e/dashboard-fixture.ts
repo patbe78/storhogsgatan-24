@@ -13,7 +13,7 @@ const people = {
   child: { id: childId, name: 'Felix', color: '#16a34a' },
   secondChild: { id: secondChildId, name: 'Gustav', color: '#f59e0b' },
   thirdChild: { id: thirdChildId, name: 'Alex', color: '#7c3aed' },
-  adult: { id: adultId, name: 'Anna', color: '#db2777' }
+  adult: { id: adultId, name: 'Åsa', color: '#db2777' }
 }
 
 function row(
@@ -21,7 +21,8 @@ function row(
   title: string,
   startsAt: string,
   categoryId: string | null,
-  participants = [people.current]
+  participants = [people.current],
+  endsAt?: string
 ): Record<string, unknown> {
   const categoryName =
     categoryId === workCategoryId
@@ -44,7 +45,7 @@ function row(
     created_by: userId,
     updated_by: userId,
     starts_at: startsAt,
-    ends_at: new Date(new Date(startsAt).getTime() + 3600000).toISOString(),
+    ends_at: endsAt ?? new Date(new Date(startsAt).getTime() + 3600000).toISOString(),
     all_day: false,
     all_day_start: null,
     all_day_end: null,
@@ -148,8 +149,23 @@ export function dashboardFixtureOptions(): CalendarFixtureOptions {
       allDayRow('alex-leave', 'Sjukskriven', '2026-08-10', '2026-08-14', workCategoryId, [
         people.thirdChild
       ]),
-      row('adult-work', 'Annas jobb', '2026-08-13T07:00:00.000Z', workCategoryId, [people.adult]),
-      row('household-now', 'Städa köket', '2026-08-14T16:00:00.000Z', householdCategoryId),
+      row('adult-work', 'Jobb', '2026-08-13T07:00:00.000Z', workCategoryId, [people.adult]),
+      row(
+        'adult-night',
+        'Jobb',
+        '2026-08-14T19:30:00.000Z',
+        workCategoryId,
+        [people.adult],
+        '2026-08-15T03:30:00.000Z'
+      ),
+      row(
+        'household-now',
+        'Sophämtning tunna 1',
+        '2026-08-13T04:00:00.000Z',
+        householdCategoryId,
+        [people.current],
+        '2026-08-13T15:00:00.000Z'
+      ),
       row('household-next', 'Tvätta bilen', '2026-08-19T16:00:00.000Z', householdCategoryId)
     ]
   }

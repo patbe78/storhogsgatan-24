@@ -1,10 +1,12 @@
 import { DateWidget, EventsWidget, WeeklyActivitiesWidget } from './components/widgets'
 import { useCurrentProfile } from './hooks/use-current-profile'
 import { useDashboardViewModel } from './hooks/use-dashboard-view-model'
+import { isAdultLikeProfile } from './utils/dashboard-roles'
 
 export function DashboardPage() {
   const profile = useCurrentProfile()
   const dashboard = useDashboardViewModel(profile)
+  const showAdultWork = profile ? isAdultLikeProfile(profile) : false
 
   return (
     <>
@@ -21,9 +23,10 @@ export function DashboardPage() {
           isError={dashboard.isError}
         />
         <WeeklyActivitiesWidget
-          cardName="Mina arbetstider"
+          cardName={showAdultWork ? 'Våra arbetstider' : 'Mina arbetstider'}
           {...dashboard.myWork}
           empty="Inga arbetstider denna vecka."
+          showOwners={showAdultWork}
           activityType="work"
           isLoading={dashboard.isLoading}
           isError={dashboard.isError}

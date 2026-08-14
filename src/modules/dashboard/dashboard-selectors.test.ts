@@ -10,6 +10,7 @@ import {
   selectFamilyWorkActivities,
   selectHouseholdActivities,
   selectMyWorkActivities,
+  selectOurWorkActivities,
   selectUpcomingPersonalActivities
 } from './selectors/dashboard-selectors'
 import type { DashboardProfile } from './types/dashboard'
@@ -320,6 +321,47 @@ describe('dashboard selectors', () => {
         (item) => item.occurrence.event.title
       )
     ).toEqual(['städa nu'])
+  })
+
+  it('väljer samtliga aktiva vuxenlikas arbete oberoende av inloggad vuxen', () => {
+    const occurrences = [
+      timed('Patrik jobb', '2026-08-12T05:00:00.000Z', workCategoryId, [current]),
+      timed('Anna jobb', '2026-08-12T06:00:00.000Z', workCategoryId, [adult]),
+      timed('Felix jobb', '2026-08-12T07:00:00.000Z', workCategoryId, [child]),
+      timed('Inaktiv jobb', '2026-08-12T08:00:00.000Z', workCategoryId, [inactiveChild])
+    ]
+    const profiles = [current, adult, child, inactiveChild]
+
+    for (const loggedIn of [current, adult]) {
+      const selected = selectOurWorkActivities(
+        occurrences,
+        loggedIn,
+        profiles,
+        work,
+        dashboardWeekRange(now, 0)
+      )
+      expect(selected.map((item) => item.occurrence.event.title)).toEqual([
+        'Patrik jobb',
+        'Anna jobb'
+      ])
+      expect(selected.map((item) => item.owners[0].name)).toEqual(['Patrik', 'Anna'])
+    }
+  })
+
+  it('ger inte barn eller gäst det vuxengemensamma arbetsurvalet', () => {
+    const guest = { ...current, id: 'guest', role: 'guest' as const }
+    const occurrence = timed('Patrik jobb', '2026-08-12T05:00:00.000Z', workCategoryId, [current])
+    for (const loggedIn of [child, guest]) {
+      expect(
+        selectOurWorkActivities(
+          [occurrence],
+          loggedIn,
+          [current, adult, child, guest],
+          work,
+          dashboardWeekRange(now, 0)
+        )
+      ).toEqual([])
+    }
   })
 
   it('visar barnens arbete för admin/vuxen utan duplicering av delade event', () => {
