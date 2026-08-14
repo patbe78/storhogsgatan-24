@@ -5,13 +5,13 @@ import { describe, expect, it } from 'vitest'
 const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8')
 
 describe('PWA-konfiguration', () => {
-  it('bygger och visar releaseversion 0.8.3 från paketets versionskälla', () => {
+  it('bygger och visar releaseversion 0.8.4 från paketets versionskälla', () => {
     const packageJson = JSON.parse(read('package.json')) as { version: string }
     const config = read('vite.config.ts')
     const statusPanel = read('src/modules/pwa/components/PwaStatusPanel.tsx')
 
-    expect(packageJson.version).toBe('0.8.3')
-    expect(config).toContain("process.env.npm_package_version ?? '0.8.3'")
+    expect(packageJson.version).toBe('0.8.4')
+    expect(config).toContain("process.env.npm_package_version ?? '0.8.4'")
     expect(statusPanel).toContain('{__APP_VERSION__}')
   })
 

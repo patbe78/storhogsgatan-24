@@ -80,3 +80,12 @@ export function intervalsOverlap(
 ): boolean {
   return new Date(startsAt) < range.end && new Date(endsAt) > range.start
 }
+
+export function occurrenceBelongsToDashboardWeek(
+  occurrence: CalendarOccurrence,
+  range: DashboardDateRange
+): boolean {
+  if (occurrence.allDay) return intervalsOverlap(occurrence.startsAt, occurrence.endsAt, range)
+  const startsAt = new Date(occurrence.startsAt)
+  return startsAt >= range.start && startsAt < range.end
+}

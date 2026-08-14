@@ -81,6 +81,30 @@ function allDayRow(
   }
 }
 
+function recurringOvernightRow(): Record<string, unknown> {
+  return {
+    ...row(
+      'felix-sunday-series',
+      'Jobb',
+      '2026-08-02T15:30:00.000Z',
+      workCategoryId,
+      [people.child],
+      '2026-08-03T03:30:00.000Z'
+    ),
+    recurrence_series_id: 'felix-sunday-rule',
+    recurrence: {
+      id: 'felix-sunday-rule',
+      frequency: 'weekly',
+      interval_value: 1,
+      starts_on: '2026-08-02',
+      ends_on: '2026-08-16',
+      occurrence_count: null,
+      parent_series_id: null,
+      split_from_date: null
+    }
+  }
+}
+
 export function dashboardFixtureOptions(): CalendarFixtureOptions {
   return {
     role: 'admin',
@@ -127,7 +151,10 @@ export function dashboardFixtureOptions(): CalendarFixtureOptions {
         is_system: false
       }
     ],
-    calendarDefaultEntries: [{ participant_profile_id: userId, category_id: workCategoryId }],
+    calendarDefaultEntries: [
+      { participant_profile_id: userId, category_id: workCategoryId },
+      { participant_profile_id: childId, category_id: workCategoryId }
+    ],
     calendarEvents: [
       row('upcoming-hidden', 'Filterdold aktivitet', '2026-08-11T12:00:00.000Z', otherCategoryId),
       row('upcoming-2', 'Aktivitet två', '2026-08-12T12:00:00.000Z', null),
@@ -138,6 +165,15 @@ export function dashboardFixtureOptions(): CalendarFixtureOptions {
       row('upcoming-7', 'Aktivitet sju', '2026-08-17T12:00:00.000Z', otherCategoryId),
       row('my-work', 'Jobb', '2026-08-12T05:00:00.000Z', workCategoryId),
       row('my-work-next', 'Nattjour', '2026-08-18T19:00:00.000Z', workCategoryId),
+      recurringOvernightRow(),
+      row(
+        'felix-real-v34',
+        'Felix riktigt V34-pass',
+        '2026-08-18T06:00:00.000Z',
+        workCategoryId,
+        [people.child],
+        '2026-08-18T14:00:00.000Z'
+      ),
       ...[10, 11, 12, 13, 14].flatMap((day) => [
         row(`felix-work-${day}`, 'Jobb', `2026-08-${day}T03:30:00.000Z`, workCategoryId, [
           people.child

@@ -1,11 +1,14 @@
 import { formatInTimeZone } from 'date-fns-tz'
 import { CALENDAR_TIME_ZONE } from '@/modules/calendar/utils/calendar-dates'
+import { event } from '@/modules/calendar/tests/fixtures'
+import { singleOccurrence } from '@/modules/calendar/utils/calendar-recurrence'
 import {
   dashboardDateLabel,
   dashboardIsoWeek,
   dashboardTodayRange,
   dashboardWeekRange,
-  dashboardWeekdayLabel
+  dashboardWeekdayLabel,
+  occurrenceBelongsToDashboardWeek
 } from './utils/dashboard-dates'
 
 describe('dashboard dates', () => {
@@ -50,5 +53,56 @@ describe('dashboard dates', () => {
     expect(formatInTimeZone(range.end, CALENDAR_TIME_ZONE, 'yyyy-MM-dd HH:mm')).toBe(
       '2026-08-27 00:00'
     )
+  })
+
+  it('filtrerar tidsatta veckor på start >= måndag och start < nästa måndag', () => {
+    const range = dashboardWeekRange(new Date('2026-08-11T10:00:00.000Z'), 0)
+    const timed = (id: string, startsAt: string, endsAt: string) =>
+      singleOccurrence(event({ id, startsAt, endsAt }))
+
+    expect(
+      occurrenceBelongsToDashboardWeek(
+        timed('monday', '2026-08-09T22:00:00.000Z', '2026-08-09T23:00:00.000Z'),
+        range
+      )
+    ).toBe(true)
+    expect(
+      occurrenceBelongsToDashboardWeek(
+        timed('sunday', '2026-08-16T21:59:00.000Z', '2026-08-16T22:30:00.000Z'),
+        range
+      )
+    ).toBe(true)
+    expect(
+      occurrenceBelongsToDashboardWeek(
+        timed('next-monday', '2026-08-16T22:00:00.000Z', '2026-08-16T23:00:00.000Z'),
+        range
+      )
+    ).toBe(false)
+  })
+
+  it('låter nattpass tillhöra startveckan men behåller överlapp för flerdagars heldag', () => {
+    const current = dashboardWeekRange(new Date('2026-08-11T10:00:00.000Z'), 0)
+    const next = dashboardWeekRange(new Date('2026-08-11T10:00:00.000Z'), 1)
+    const overnight = singleOccurrence(
+      event({
+        startsAt: '2026-08-16T15:30:00.000Z',
+        endsAt: '2026-08-17T03:30:00.000Z'
+      })
+    )
+    const allDay = singleOccurrence(
+      event({
+        id: 'all-day',
+        allDay: true,
+        startsAt: null,
+        endsAt: null,
+        allDayStart: '2026-08-16',
+        allDayEnd: '2026-08-17'
+      })
+    )
+
+    expect(occurrenceBelongsToDashboardWeek(overnight, current)).toBe(true)
+    expect(occurrenceBelongsToDashboardWeek(overnight, next)).toBe(false)
+    expect(occurrenceBelongsToDashboardWeek(allDay, current)).toBe(true)
+    expect(occurrenceBelongsToDashboardWeek(allDay, next)).toBe(true)
   })
 })

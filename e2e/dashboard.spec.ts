@@ -58,14 +58,16 @@ test('visar den personliga dashboarden i rätt ordning och oberoende av kalender
     'Tis',
     'Ons',
     'Tor',
-    'Fre'
+    'Fre',
+    'Sön'
   ])
-  await expect(family.getByText('Felix', { exact: true })).toHaveCount(5)
+  await expect(family.getByText('Felix', { exact: true })).toHaveCount(6)
   await expect(family.getByText('Gustav', { exact: true })).toHaveCount(5)
   await expect(family.getByText('Alex', { exact: true })).toHaveCount(1)
   await expect(family.getByText('Sjukskriven · Heldag')).toBeVisible()
   await expect(family.getByText('Jobb', { exact: true })).toHaveCount(0)
-  await expect(family.locator('.dashboard-week-owner__color')).toHaveCount(11)
+  await expect(family.getByText('17:30–05:30')).toBeVisible()
+  await expect(family.locator('.dashboard-week-owner__color')).toHaveCount(12)
   await expect(family.locator('.dashboard-owner')).toHaveCount(0)
   await expect(family.locator('.dashboard-events')).toHaveCount(0)
   await expect(family.getByText('Åsa', { exact: true })).toHaveCount(0)
@@ -93,6 +95,8 @@ test('har separat veckostate per kort och återställer den vid återinträde oc
   const family = card(page, /^Familjens arbetstider/)
   const household = card(page, /^Hushållsuppgifter/)
 
+  await expect(family.getByText('17:30–05:30')).toBeVisible()
+
   await ourWork.getByRole('button', { name: 'Visa nästa vecka för Våra arbetstider' }).click()
   await expect(ourWork.getByRole('heading', { level: 2 })).toHaveText('Våra arbetstider · V34')
   await expect(ourWork.getByText('Nattjour · 21:00–22:00')).toBeVisible()
@@ -111,9 +115,15 @@ test('har separat veckostate per kort och återställer den vid återinträde oc
 
   await family.getByRole('button', { name: 'Visa nästa vecka för Familjens arbetstider' }).click()
   await expect(family.getByRole('heading', { level: 2 })).toHaveText('Familjens arbetstider · V34')
-  await expect(family.getByText('Inga arbetstider denna vecka.')).toBeVisible()
+  await expect(family.getByText('Felix riktigt V34-pass · 08:00–16:00')).toBeVisible()
+  await expect(family.getByText('17:30–05:30')).toHaveCount(0)
   await expect(ourWork.getByRole('heading', { level: 2 })).toHaveText('Våra arbetstider · V34')
   await expect(household.getByRole('heading', { level: 2 })).toHaveText('Hushållsuppgifter · V33')
+  await family.getByRole('button', { name: 'Visa aktuell vecka för Familjens arbetstider' }).click()
+  await expect(family.getByText('17:30–05:30')).toBeVisible()
+  await family.getByRole('button', { name: 'Visa nästa vecka för Familjens arbetstider' }).click()
+  await expect(family.getByText('Felix riktigt V34-pass · 08:00–16:00')).toBeVisible()
+  await expect(family.getByText('17:30–05:30')).toHaveCount(0)
   await family.getByRole('button', { name: 'Visa aktuell vecka för Familjens arbetstider' }).click()
 
   await household.getByRole('button', { name: 'Visa nästa vecka för Hushållsuppgifter' }).click()
