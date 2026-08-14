@@ -21,13 +21,45 @@ test('dashboard 2.0 fungerar på iPhone utan overflow eller scroll-lock', async 
 
   await expect(page.getByLabel('Datum och veckonummer')).toBeVisible()
   await expect(card(page, /^Mina kommande aktiviteter$/).getByRole('link')).toHaveCount(6)
-  await expect(card(page, /^Mina arbetstider/)).toBeVisible()
+  await expect(card(page, /^Våra arbetstider/)).toBeVisible()
   await expect(
     card(page, /^Familjens arbetstider/)
       .getByText('Felix', { exact: true })
       .first()
   ).toBeVisible()
   await expect(card(page, /^Hushållsuppgifter/)).toBeVisible()
+  await expect(page.getByText('Vecka 33')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Våra arbetstider · V33' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Familjens arbetstider · V33' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hushållsuppgifter · V33' })).toBeVisible()
+  await expect(card(page, /^Våra arbetstider/).getByText('21:30–05:30')).toBeVisible()
+  await expect(card(page, /^Våra arbetstider/).getByText('Fre–Lör')).toHaveCount(0)
+  await expect(card(page, /^Hushållsuppgifter/).getByText('06:00–17:00')).toHaveCount(0)
+
+  for (const name of ['Våra arbetstider', 'Familjens arbetstider', 'Hushållsuppgifter']) {
+    const header = card(page, new RegExp(`^${name}`)).locator('.dashboard-widget__header')
+    const metrics = await header.evaluate((element) => {
+      const heading = element.querySelector('h2')!
+      const style = getComputedStyle(heading)
+      const lineHeight =
+        Number.parseFloat(style.lineHeight) || Number.parseFloat(style.fontSize) * 1.2
+      const buttons = Array.from(element.querySelectorAll<HTMLElement>('button'))
+      const visuals = Array.from(
+        element.querySelectorAll<HTMLElement>('.dashboard-week-control__visual')
+      )
+      return {
+        oneLine: heading.getBoundingClientRect().height <= lineHeight + 2,
+        buttonSizes: buttons.map((button) => ({
+          width: button.getBoundingClientRect().width,
+          height: button.getBoundingClientRect().height
+        })),
+        visualSizes: visuals.map((visual) => visual.getBoundingClientRect().width)
+      }
+    })
+    expect(metrics.oneLine).toBe(true)
+    expect(metrics.buttonSizes.every(({ width, height }) => width >= 44 && height >= 44)).toBe(true)
+    expect(metrics.visualSizes.every((width) => width >= 32 && width <= 36)).toBe(true)
+  }
 
   const compactFamily = card(page, /^Familjens arbetstider/)
   const compactMetrics = await compactFamily.evaluate((element) => ({
@@ -42,19 +74,26 @@ test('dashboard 2.0 fungerar på iPhone utan overflow eller scroll-lock', async 
   expect(compactMetrics.scrollWidth).toBeLessThanOrEqual(compactMetrics.clientWidth)
   expect(compactMetrics.clippedRows).toBe(0)
 
-  await card(page, /^Mina arbetstider/)
-    .getByRole('button', { name: 'Visa nästa vecka för Mina arbetstider' })
+  await card(page, /^Våra arbetstider/)
+    .getByRole('button', { name: 'Visa nästa vecka för Våra arbetstider' })
     .click()
-  await expect(page.getByRole('heading', { name: 'Mina arbetstider – Vecka 34' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Våra arbetstider · V34' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Familjens arbetstider · V33' })).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: 'Familjens arbetstider – Vecka 33' })
-  ).toBeVisible()
+    card(page, /^Våra arbetstider/).getByRole('button', {
+      name: 'Visa nästa vecka för Våra arbetstider'
+    })
+  ).toBeDisabled()
+  await card(page, /^Våra arbetstider/)
+    .getByRole('button', { name: 'Visa aktuell vecka för Våra arbetstider' })
+    .click()
+  await expect(page.getByRole('heading', { name: 'Våra arbetstider · V33' })).toBeVisible()
 
   await card(page, /^Hushållsuppgifter/)
     .getByRole('button', { name: 'Visa nästa vecka för Hushållsuppgifter' })
     .click()
-  await expect(page.getByRole('heading', { name: 'Hushållsuppgifter – Vecka 34' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Mina arbetstider – Vecka 34' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hushållsuppgifter · V34' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Våra arbetstider · V33' })).toBeVisible()
 
   const layout = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
@@ -78,9 +117,7 @@ test('dashboard 2.0 fungerar på iPhone utan overflow eller scroll-lock', async 
   await expect(page.getByRole('button', { name: 'Ny aktivitet' })).toBeVisible()
   await page.getByRole('button', { name: 'Öppna meny' }).click()
   await page.getByRole('link', { name: 'Dashboard' }).click()
-  await expect(page.getByRole('heading', { name: 'Mina arbetstider – Vecka 33' })).toBeVisible()
-  await expect(
-    page.getByRole('heading', { name: 'Familjens arbetstider – Vecka 33' })
-  ).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Hushållsuppgifter – Vecka 33' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Våra arbetstider · V33' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Familjens arbetstider · V33' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Hushållsuppgifter · V33' })).toBeVisible()
 })

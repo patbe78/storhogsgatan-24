@@ -7,7 +7,7 @@ import type {
 } from '../types/dashboard'
 import { eventMatchesCategory } from '../utils/dashboard-categories'
 import { intervalsOverlap } from '../utils/dashboard-dates'
-import { familyWorkProfiles } from '../utils/dashboard-roles'
+import { familyWorkProfiles, ourWorkProfiles } from '../utils/dashboard-roles'
 
 function chronological(a: CalendarOccurrence, b: CalendarOccurrence): number {
   return (
@@ -70,6 +70,30 @@ export function selectMyWorkActivities(
   range: DashboardDateRange
 ): DashboardOccurrenceItem[] {
   return personalCategoryItems(occurrences, profile, workCategory, range)
+}
+
+export function selectOurWorkActivities(
+  occurrences: CalendarOccurrence[],
+  currentProfile: DashboardProfile,
+  profiles: DashboardProfile[],
+  workCategory: DashboardCategoryIdentity,
+  range: DashboardDateRange
+): DashboardOccurrenceItem[] {
+  const targets = ourWorkProfiles(currentProfile, profiles)
+  const targetIds = new Set(targets.map((profile) => profile.id))
+
+  return occurrences
+    .filter(
+      (occurrence) =>
+        inRange(occurrence, range) &&
+        eventMatchesCategory(occurrence.event, workCategory) &&
+        occurrence.event.participants.some((participant) => targetIds.has(participant.id))
+    )
+    .sort(chronological)
+    .map((occurrence) => ({
+      occurrence,
+      owners: targets.filter((profile) => participates(occurrence, profile.id))
+    }))
 }
 
 export function selectHouseholdActivities(

@@ -6,7 +6,13 @@ import { DashboardPage } from './index'
 const setOffset = vi.fn()
 
 vi.mock('./hooks/use-current-profile', () => ({
-  useCurrentProfile: () => ({ id: 'profile-1', name: 'Patrik' })
+  useCurrentProfile: () => ({
+    id: 'profile-1',
+    name: 'Patrik',
+    role: 'admin',
+    color: '#2563eb',
+    is_active: true
+  })
 }))
 vi.mock('./hooks/use-dashboard-view-model', () => ({
   useDashboardViewModel: () => ({
@@ -35,12 +41,13 @@ describe('DashboardPage', () => {
     ).toEqual([
       'Datum och veckonummer',
       expect.stringContaining('Mina kommande aktiviteter'),
-      expect.stringContaining('Mina arbetstider – Vecka 33'),
-      expect.stringContaining('Familjens arbetstider – Vecka 33'),
-      expect.stringContaining('Hushållsuppgifter – Vecka 33')
+      expect.stringContaining('Våra arbetstider · V33'),
+      expect.stringContaining('Familjens arbetstider · V33'),
+      expect.stringContaining('Hushållsuppgifter · V33')
     ])
     expect(screen.getByText('Tisdag 11 Augusti')).toBeInTheDocument()
-    expect(screen.getByText('Vecka 33', { selector: '.dashboard-week' })).toBeInTheDocument()
+    expect(screen.getByText('V33', { selector: '.dashboard-week' })).toBeInTheDocument()
+    expect(screen.queryByText('Vecka 33')).not.toBeInTheDocument()
   })
 
   it('har tagit bort de gamla dashboardkorten och snabbgenvägarna', () => {

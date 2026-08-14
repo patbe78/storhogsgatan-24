@@ -8,6 +8,14 @@ export function isChildProfile(profile: Pick<DashboardProfile, 'role'>): boolean
   return profile.role === 'member'
 }
 
+export function ourWorkProfiles(
+  currentProfile: DashboardProfile,
+  profiles: DashboardProfile[]
+): DashboardProfile[] {
+  if (!isAdultLikeProfile(currentProfile)) return []
+  return profiles.filter((profile) => profile.is_active && isAdultLikeProfile(profile))
+}
+
 export function familyWorkProfiles(
   currentProfile: DashboardProfile,
   profiles: DashboardProfile[]

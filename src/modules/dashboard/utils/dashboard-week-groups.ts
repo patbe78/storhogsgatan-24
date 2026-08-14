@@ -27,10 +27,13 @@ export function groupDashboardWeekActivities(
   const rangeEnd = range.end.getTime() - 1
 
   for (const item of [...items].sort(chronological)) {
-    const visibleStart = new Date(
-      Math.max(new Date(item.occurrence.startsAt).getTime(), range.start.getTime())
-    )
-    const visibleEnd = new Date(Math.min(new Date(item.occurrence.endsAt).getTime() - 1, rangeEnd))
+    const occurrenceStart = new Date(item.occurrence.startsAt)
+    const visibleStart = item.occurrence.allDay
+      ? new Date(Math.max(occurrenceStart.getTime(), range.start.getTime()))
+      : occurrenceStart
+    const visibleEnd = item.occurrence.allDay
+      ? new Date(Math.min(new Date(item.occurrence.endsAt).getTime() - 1, rangeEnd))
+      : visibleStart
     const startKey = dateKey(visibleStart)
     const endKey = dateKey(visibleEnd)
     const key = `${startKey}:${endKey}`

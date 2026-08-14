@@ -4,6 +4,7 @@ import {
   selectFamilyWorkActivities,
   selectHouseholdActivities,
   selectMyWorkActivities,
+  selectOurWorkActivities,
   selectUpcomingPersonalActivities
 } from '../selectors/dashboard-selectors'
 import type { DashboardProfile } from '../types/dashboard'
@@ -14,6 +15,7 @@ import {
   dashboardTodayRange,
   dashboardWeekRange
 } from '../utils/dashboard-dates'
+import { isAdultLikeProfile } from '../utils/dashboard-roles'
 import { useDashboardData } from './use-dashboard-data'
 
 function dashboardProfile(profile: Profile): DashboardProfile {
@@ -67,12 +69,20 @@ export function useDashboardViewModel(profile: Profile | null) {
       myWork: weekly(
         myWorkWeek,
         currentProfile
-          ? selectMyWorkActivities(
-              data.occurrences,
-              currentProfile,
-              workCategory,
-              dashboardWeekRange(now, myWorkWeek)
-            )
+          ? isAdultLikeProfile(currentProfile)
+            ? selectOurWorkActivities(
+                data.occurrences,
+                currentProfile,
+                data.profiles,
+                workCategory,
+                dashboardWeekRange(now, myWorkWeek)
+              )
+            : selectMyWorkActivities(
+                data.occurrences,
+                currentProfile,
+                workCategory,
+                dashboardWeekRange(now, myWorkWeek)
+              )
           : emptyItems,
         setMyWorkWeek
       ),
