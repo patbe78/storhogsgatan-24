@@ -114,6 +114,29 @@ describe('calendar recurrence', () => {
         rangeEnd
       )
     ).toHaveLength(3))
+  it('avslutar ett veckovis Stockholm-nattpass på sista lokala startdatumet', () => {
+    const items = generateOccurrences(
+      event({
+        startsAt: '2026-08-02T15:30:00.000Z',
+        endsAt: '2026-08-03T03:30:00.000Z'
+      }),
+      rule({
+        frequency: 'weekly',
+        startsOn: '2026-08-02',
+        endsOn: '2026-08-16',
+        occurrenceCount: null
+      }),
+      new Date('2026-08-09T22:00:00.000Z'),
+      new Date('2026-08-24T22:00:00.000Z')
+    )
+
+    expect(items.map((item) => item.occurrenceDate)).toEqual(['2026-08-09', '2026-08-16'])
+    expect(items.at(-1)).toMatchObject({
+      startsAt: '2026-08-16T15:30:00.000Z',
+      endsAt: '2026-08-17T03:30:00.000Z'
+    })
+    expect(items.some((item) => item.occurrenceDate === '2026-08-23')).toBe(false)
+  })
   it('räknar tidigare förekomster inför delning', () =>
     expect(
       occurrencesBefore(

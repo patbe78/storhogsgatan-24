@@ -6,7 +6,7 @@ import type {
   DashboardProfile
 } from '../types/dashboard'
 import { eventMatchesCategory } from '../utils/dashboard-categories'
-import { intervalsOverlap } from '../utils/dashboard-dates'
+import { intervalsOverlap, occurrenceBelongsToDashboardWeek } from '../utils/dashboard-dates'
 import { familyWorkProfiles, ourWorkProfiles } from '../utils/dashboard-roles'
 
 function chronological(a: CalendarOccurrence, b: CalendarOccurrence): number {
@@ -34,7 +34,7 @@ function personalCategoryItems(
   return occurrences
     .filter(
       (occurrence) =>
-        inRange(occurrence, range) &&
+        occurrenceBelongsToDashboardWeek(occurrence, range) &&
         participates(occurrence, profile.id) &&
         eventMatchesCategory(occurrence.event, category)
     )
@@ -85,7 +85,7 @@ export function selectOurWorkActivities(
   return occurrences
     .filter(
       (occurrence) =>
-        inRange(occurrence, range) &&
+        occurrenceBelongsToDashboardWeek(occurrence, range) &&
         eventMatchesCategory(occurrence.event, workCategory) &&
         occurrence.event.participants.some((participant) => targetIds.has(participant.id))
     )
@@ -118,7 +118,7 @@ export function selectFamilyWorkActivities(
   return occurrences
     .filter(
       (occurrence) =>
-        inRange(occurrence, range) &&
+        occurrenceBelongsToDashboardWeek(occurrence, range) &&
         eventMatchesCategory(occurrence.event, workCategory) &&
         occurrence.event.participants.some((participant) => targetIds.has(participant.id))
     )

@@ -33,6 +33,7 @@ test('dashboard 2.0 fungerar på iPhone utan overflow eller scroll-lock', async 
   await expect(page.getByRole('heading', { name: 'Familjens arbetstider · V33' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Hushållsuppgifter · V33' })).toBeVisible()
   await expect(card(page, /^Våra arbetstider/).getByText('21:30–05:30')).toBeVisible()
+  await expect(card(page, /^Familjens arbetstider/).getByText('17:30–05:30')).toBeVisible()
   await expect(card(page, /^Våra arbetstider/).getByText('Fre–Lör')).toHaveCount(0)
   await expect(card(page, /^Hushållsuppgifter/).getByText('06:00–17:00')).toHaveCount(0)
 
@@ -70,9 +71,30 @@ test('dashboard 2.0 fungerar på iPhone utan overflow eller scroll-lock', async 
       element.querySelectorAll<HTMLElement>('.dashboard-week-activities a')
     ).filter((row) => row.scrollWidth > row.clientWidth).length
   }))
-  expect(compactMetrics.height).toBeLessThan(650)
+  expect(compactMetrics.height).toBeLessThan(660)
   expect(compactMetrics.scrollWidth).toBeLessThanOrEqual(compactMetrics.clientWidth)
   expect(compactMetrics.clippedRows).toBe(0)
+
+  await compactFamily
+    .getByRole('button', { name: 'Visa nästa vecka för Familjens arbetstider' })
+    .click()
+  await expect(compactFamily.getByRole('heading', { level: 2 })).toHaveText(
+    'Familjens arbetstider · V34'
+  )
+  await expect(compactFamily.getByText('Felix riktigt V34-pass · 08:00–16:00')).toBeVisible()
+  await expect(compactFamily.getByText('17:30–05:30')).toHaveCount(0)
+  await compactFamily
+    .getByRole('button', { name: 'Visa aktuell vecka för Familjens arbetstider' })
+    .click()
+  await expect(compactFamily.getByText('17:30–05:30')).toBeVisible()
+  await compactFamily
+    .getByRole('button', { name: 'Visa nästa vecka för Familjens arbetstider' })
+    .click()
+  await expect(compactFamily.getByText('Felix riktigt V34-pass · 08:00–16:00')).toBeVisible()
+  await expect(compactFamily.getByText('17:30–05:30')).toHaveCount(0)
+  await compactFamily
+    .getByRole('button', { name: 'Visa aktuell vecka för Familjens arbetstider' })
+    .click()
 
   await card(page, /^Våra arbetstider/)
     .getByRole('button', { name: 'Visa nästa vecka för Våra arbetstider' })

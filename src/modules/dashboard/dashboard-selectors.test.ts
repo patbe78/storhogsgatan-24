@@ -15,7 +15,11 @@ import {
 } from './selectors/dashboard-selectors'
 import type { DashboardProfile } from './types/dashboard'
 import { DASHBOARD_CATEGORY_NAMES, dashboardCategoryIdentity } from './utils/dashboard-categories'
-import { dashboardTodayRange, dashboardWeekRange } from './utils/dashboard-dates'
+import {
+  dashboardDataRange,
+  dashboardTodayRange,
+  dashboardWeekRange
+} from './utils/dashboard-dates'
 
 const now = new Date('2026-08-11T10:00:00.000Z')
 const workCategoryId = '10000000-0000-4000-8000-000000000001'
@@ -321,6 +325,83 @@ describe('dashboard selectors', () => {
         (item) => item.occurrence.event.title
       )
     ).toEqual(['städa nu'])
+  })
+
+  it('läcker inte ett återkommande söndagspass till nästa ISO-vecka via sluttiden', () => {
+    const series = event({
+      id: 'felix-sunday-series',
+      title: 'Jobb',
+      startsAt: '2026-08-02T15:30:00.000Z',
+      endsAt: '2026-08-03T03:30:00.000Z',
+      categoryId: workCategoryId,
+      categoryName: 'Arbete',
+      participants: [participant(child)]
+    })
+    const range = dashboardDataRange(now)
+    const calendarOccurrences = generateOccurrences(
+      series,
+      {
+        id: 'felix-sunday-rule',
+        frequency: 'weekly',
+        intervalValue: 1,
+        startsOn: '2026-08-02',
+        endsOn: '2026-08-16',
+        occurrenceCount: null,
+        parentSeriesId: null,
+        splitFromDate: null
+      },
+      range.start,
+      range.end
+    )
+    const currentWeek = selectFamilyWorkActivities(
+      calendarOccurrences,
+      current,
+      [current, adult, child],
+      work,
+      dashboardWeekRange(now, 0)
+    )
+    const nextWeek = selectFamilyWorkActivities(
+      calendarOccurrences,
+      current,
+      [current, adult, child],
+      work,
+      dashboardWeekRange(now, 1)
+    )
+
+    expect(calendarOccurrences.map((occurrence) => occurrence.occurrenceDate)).toEqual([
+      '2026-08-09',
+      '2026-08-16'
+    ])
+    expect(currentWeek.map((item) => item.occurrence.occurrenceDate)).toEqual(['2026-08-16'])
+    expect(currentWeek[0].occurrence.startsAt).toBe('2026-08-16T15:30:00.000Z')
+    expect(currentWeek[0].occurrence.endsAt).toBe('2026-08-17T03:30:00.000Z')
+    expect(nextWeek).toEqual([])
+    expect(new Set([...currentWeek, ...nextWeek].map((item) => item.occurrence.key)).size).toBe(1)
+    expect(
+      [...currentWeek, ...nextWeek].every((item) =>
+        calendarOccurrences.some((occurrence) => occurrence.key === item.occurrence.key)
+      )
+    ).toBe(true)
+  })
+
+  it('visar ett verkligt Felix-pass vars start ligger i nästa vecka', () => {
+    const realNextWeek = timed(
+      'Felix riktigt V34-pass',
+      '2026-08-18T06:00:00.000Z',
+      workCategoryId,
+      [child],
+      '2026-08-18T14:00:00.000Z'
+    )
+
+    expect(
+      selectFamilyWorkActivities(
+        [realNextWeek],
+        current,
+        [current, adult, child],
+        work,
+        dashboardWeekRange(now, 1)
+      ).map((item) => item.occurrence.event.title)
+    ).toEqual(['Felix riktigt V34-pass'])
   })
 
   it('väljer samtliga aktiva vuxenlikas arbete oberoende av inloggad vuxen', () => {
