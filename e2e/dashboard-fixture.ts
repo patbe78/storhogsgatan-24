@@ -68,7 +68,7 @@ function allDayRow(
   title: string,
   allDayStart: string,
   allDayEnd: string,
-  categoryId: string,
+  categoryId: string | null,
   participants: (typeof people.child)[]
 ): Record<string, unknown> {
   return {
@@ -157,7 +157,7 @@ export function dashboardFixtureOptions(): CalendarFixtureOptions {
     ],
     calendarEvents: [
       row('upcoming-hidden', 'Filterdold aktivitet', '2026-08-11T12:00:00.000Z', otherCategoryId),
-      row('upcoming-2', 'Aktivitet två', '2026-08-12T12:00:00.000Z', null),
+      allDayRow('upcoming-2', 'Karlstad', '2026-08-12', '2026-08-12', null, [people.current]),
       row('upcoming-3', 'Aktivitet tre', '2026-08-13T12:00:00.000Z', otherCategoryId),
       row('upcoming-4', 'Aktivitet fyra', '2026-08-14T12:00:00.000Z', otherCategoryId),
       row('upcoming-5', 'Aktivitet fem', '2026-08-15T12:00:00.000Z', otherCategoryId),

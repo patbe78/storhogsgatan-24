@@ -84,7 +84,7 @@ describe('dashboardens kompakta veckogrupper', () => {
     expect(groups[0].label).not.toBe('Fre–Lör')
   })
 
-  it('renderar kompakta rader, döljer Jobb och behåller titel, heldag, namn och profilfärg', () => {
+  it('renderar kompakta rader, döljer Jobb och behåller heldagstitel, namn och profilfärg', () => {
     const setOffset = vi.fn()
     render(
       <BrowserRouter>
@@ -121,7 +121,8 @@ describe('dashboardens kompakta veckogrupper', () => {
     expect(within(card).queryByText('Jobb')).not.toBeInTheDocument()
     expect(within(card).getByText('05:30–13:30')).toBeInTheDocument()
     expect(within(card).getByText('Nattjour · 21:00–07:00')).toBeInTheDocument()
-    expect(within(card).getByText('Sjukskriven · Heldag')).toBeInTheDocument()
+    expect(within(card).getByText('Sjukskriven')).toBeInTheDocument()
+    expect(within(card).queryByText('Heldag')).not.toBeInTheDocument()
     expect(within(card).getAllByText('Felix')).toHaveLength(3)
     expect(card.querySelectorAll('.dashboard-week-owner__color')).toHaveLength(3)
     expect(card.querySelector('.dashboard-owner')).not.toBeInTheDocument()

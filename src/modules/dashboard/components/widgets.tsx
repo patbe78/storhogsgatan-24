@@ -53,6 +53,7 @@ function ActivityList({
     <ul className="dashboard-events">
       {items.map(({ occurrence, owners }) => {
         const color = occurrence.event.categoryColor ?? owners[0]?.color ?? '#64748b'
+        const timeLabel = dashboardTimeLabel(occurrence)
         return (
           <li key={occurrence.key} style={{ '--event-color': color } as CSSProperties}>
             <Link to={`/kalender?event=${encodeURIComponent(occurrence.key)}`}>
@@ -60,7 +61,7 @@ function ActivityList({
                 {dashboardOccurrenceDateLabel(occurrence)}
               </span>
               <strong>{occurrence.event.title}</strong>
-              <span className="dashboard-event-time">{occurrenceTimeLabel(occurrence)}</span>
+              {timeLabel && <span className="dashboard-event-time">{timeLabel}</span>}
               {showOwners && (
                 <span className="dashboard-event-owners" aria-label="Tillhör">
                   {owners.map((owner) => (
@@ -81,6 +82,10 @@ function ActivityList({
       })}
     </ul>
   )
+}
+
+function dashboardTimeLabel(occurrence: DashboardOccurrenceItem['occurrence']): string | null {
+  return occurrence.allDay ? null : occurrenceTimeLabel(occurrence)
 }
 
 function CardStatus({
@@ -168,8 +173,8 @@ function compactActivityLabel(
 ): string {
   const { occurrence } = item
   if (activityType === 'household') return occurrence.event.title
-  const showTitle = !isGenericWorkTitle(occurrence.event.title)
-  return [showTitle ? occurrence.event.title : null, occurrenceTimeLabel(occurrence)]
+  const showTitle = occurrence.allDay || !isGenericWorkTitle(occurrence.event.title)
+  return [showTitle ? occurrence.event.title : null, dashboardTimeLabel(occurrence)]
     .filter(Boolean)
     .join(' · ')
 }

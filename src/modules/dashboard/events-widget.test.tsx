@@ -39,4 +39,31 @@ describe('EventsWidget', () => {
       screen.getByText('Inga kommande aktiviteter de närmaste 14 dagarna.')
     ).toBeInTheDocument()
   })
+
+  it('visar heldagsaktivitetens titel och datum utan etiketten Heldag', () => {
+    const allDayItem: DashboardOccurrenceItem = {
+      occurrence: singleOccurrence(
+        event({
+          id: 'all-day',
+          title: 'Karlstad',
+          allDay: true,
+          startsAt: null,
+          endsAt: null,
+          allDayStart: '2026-08-12',
+          allDayEnd: '2026-08-12'
+        })
+      ),
+      owners: [patrik]
+    }
+
+    render(
+      <BrowserRouter>
+        <EventsWidget items={[allDayItem]} isLoading={false} isError={false} />
+      </BrowserRouter>
+    )
+
+    expect(screen.getByText('Onsdag 12 aug.')).toBeInTheDocument()
+    expect(screen.getByText('Karlstad')).toBeInTheDocument()
+    expect(screen.queryByText('Heldag')).not.toBeInTheDocument()
+  })
 })

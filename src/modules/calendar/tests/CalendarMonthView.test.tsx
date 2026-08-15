@@ -85,6 +85,15 @@ describe('CalendarMonthView', () => {
     expect(threeDays.style.gridColumn).toBe('3 / span 3')
   })
 
+  it('använder samma månadstypografitoken för tidsatta och heldagsaktiviteter', () => {
+    renderMonth([timed('Jobb'), allDay('Karlstad', '2026-08-10')])
+
+    expect(screen.getByRole('button', { name: /Jobb/ })).toHaveClass('month-event-typography')
+    expect(screen.getByRole('button', { name: /Karlstad.*Heldagsaktivitet/ })).toHaveClass(
+      'month-event-typography'
+    )
+  })
+
   it('renderar klickbara fortsättningssegment över veckogränser och flera veckor', () => {
     renderMonth([allDay('Sommarresa', '2026-08-06', '2026-08-20')])
     const segments = screen.getAllByRole('button', { name: /Sommarresa.*Heldagsaktivitet/ })

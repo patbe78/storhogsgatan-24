@@ -82,7 +82,7 @@ export function CalendarMonthView({
               {week.segments.map((segment) => (
                 <button
                   type="button"
-                  className={`month-all-day-segment ${segment.isStart ? 'starts' : 'continues-before'} ${segment.isEnd ? 'ends' : 'continues-after'}`}
+                  className={`month-all-day-segment month-event-typography ${segment.isStart ? 'starts' : 'continues-before'} ${segment.isEnd ? 'ends' : 'continues-after'}`}
                   style={
                     {
                       '--event-color': segment.item.color,
