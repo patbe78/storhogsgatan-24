@@ -13,7 +13,7 @@ export function CalendarEventCard({
   return (
     <button
       type="button"
-      className={`calendar-event-card ${compact ? 'compact' : ''}`}
+      className={`calendar-event-card ${compact ? 'compact month-event-typography' : ''}`}
       style={{ '--event-color': item.color } as React.CSSProperties}
       aria-label={item.accessibilityLabel}
       onClick={() => onSelect(item)}

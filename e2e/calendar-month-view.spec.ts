@@ -46,19 +46,40 @@ const categories = [
 const calendarEvents = [
   eventRow({
     id: 'timed',
-    title: 'Vanligt möte',
+    title: 'Jobb',
+    category_id: 'work',
+    category_name: 'Arbete',
+    category_color: '#2563eb'
+  }),
+  eventRow({
+    id: 'timed-long',
+    title: 'Längre tidsbestämd aktivitet samma dag',
+    starts_at: '2026-08-10T12:00:00.000Z',
+    ends_at: '2026-08-10T13:00:00.000Z',
     category_id: 'work',
     category_name: 'Arbete',
     category_color: '#2563eb'
   }),
   eventRow({
     id: 'all-day',
-    title: 'Semesterresa',
+    title: 'Åsa sjukskriven 50%',
     starts_at: null,
     ends_at: null,
     all_day: true,
     all_day_start: '2026-08-06',
     all_day_end: '2026-08-11',
+    category_id: 'trip',
+    category_name: 'Resa',
+    category_color: '#f97316'
+  }),
+  eventRow({
+    id: 'all-day-city',
+    title: 'Karlstad',
+    starts_at: null,
+    ends_at: null,
+    all_day: true,
+    all_day_start: '2026-08-12',
+    all_day_end: '2026-08-12',
     category_id: 'trip',
     category_name: 'Resa',
     category_color: '#f97316'
@@ -74,12 +95,31 @@ test('månadsvyn navigerar, segmenterar, öppnar aktiviteter och filtrerar i rä
   const monthHeading = page.getByRole('heading', { name: 'Augusti 2026', exact: true })
   await expect(monthHeading).toBeVisible()
   await expect(page.getByLabel('Vecka 32')).toContainText('v32')
-  await expect(page.getByRole('button', { name: /Vanligt möte/ })).toBeVisible()
+  const timed = page.getByRole('button', { name: /Jobb/ })
+  const allDay = page.getByRole('button', { name: /Åsa sjukskriven 50%.*Heldagsaktivitet/ }).first()
+  await expect(timed).toBeVisible()
+  await expect(page.getByRole('button', { name: /Längre tidsbestämd aktivitet/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Karlstad.*Heldagsaktivitet/ })).toBeVisible()
+  await expect(timed).toHaveClass(/month-event-typography/)
+  await expect(allDay).toHaveClass(/month-event-typography/)
+  const [timedTypography, allDayTypography] = await Promise.all(
+    [timed, allDay].map((locator) =>
+      locator.evaluate((element) => {
+        const style = getComputedStyle(element)
+        return {
+          fontSize: style.fontSize,
+          lineHeight: style.lineHeight,
+          fontWeight: getComputedStyle(element.querySelector('strong')!).fontWeight
+        }
+      })
+    )
+  )
+  expect(timedTypography).toEqual(allDayTypography)
 
-  const segments = page.getByRole('button', { name: /Semesterresa.*Heldagsaktivitet/ })
+  const segments = page.getByRole('button', { name: /Åsa sjukskriven 50%.*Heldagsaktivitet/ })
   await expect(segments).toHaveCount(2)
   await segments.first().click()
-  await expect(page.getByRole('dialog', { name: 'Semesterresa' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Åsa sjukskriven 50%' })).toBeVisible()
   await page.keyboard.press('Escape')
 
   await page.getByRole('button', { name: 'Nästa period' }).click()
@@ -112,8 +152,14 @@ test('månadsvyn navigerar, segmenterar, öppnar aktiviteter och filtrerar i rä
 
   await page.getByRole('button', { name: 'Avmarkera allt', exact: true }).click()
   await page.getByLabel('Patrik – Arbete – döljs').check()
-  await expect(page.getByRole('button', { name: /Vanligt möte/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Semesterresa.*Heldagsaktivitet/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Jobb/ })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: /Åsa sjukskriven 50%.*Heldagsaktivitet/ })
+  ).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /Karlstad.*Heldagsaktivitet/ })).toHaveCount(0)
   await page.getByRole('button', { name: 'Välj allt', exact: true }).click()
-  await expect(page.getByRole('button', { name: /Semesterresa.*Heldagsaktivitet/ })).toHaveCount(2)
+  await expect(
+    page.getByRole('button', { name: /Åsa sjukskriven 50%.*Heldagsaktivitet/ })
+  ).toHaveCount(2)
+  await expect(page.getByRole('button', { name: /Karlstad.*Heldagsaktivitet/ })).toBeVisible()
 })
