@@ -17,6 +17,7 @@ describe('CalendarToolbar', () => {
         onNext={onNext}
         onToday={vi.fn()}
         onCreate={vi.fn()}
+        onCreateJobShift={vi.fn()}
       />
     )
     await user.click(screen.getByRole('button', { name: 'Vecka' }))

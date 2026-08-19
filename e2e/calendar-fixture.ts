@@ -61,6 +61,7 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
   let calendarDefaultEntries = profileOptions.calendarDefaultEntries
   let remainingSaveFailures = profileOptions.calendarSaveFailures ?? 0
   let remainingDefaultSaveFailures = profileOptions.calendarDefaultSaveFailures ?? 0
+  let savedEventCount = 0
   await page.route('**/auth/v1/**', async (route) => {
     const url = route.request().url()
     if (url.includes('/token'))
@@ -112,7 +113,11 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
         p_payload: Record<string, unknown>
       }
       const payload = body.p_payload
-      const id = body.p_event_id ?? fixtureEventId
+      const id =
+        body.p_event_id ??
+        (savedEventCount++ === 0
+          ? fixtureEventId
+          : `aaaaaaaa-aaaa-4aaa-8aaa-${String(savedEventCount).padStart(12, '0')}`)
       const category = calendarCategories.find((item) => item.id === payload.categoryId)
       const previous = calendarEvents.find((item) => item.id === id)
       const row: Record<string, unknown> = {
@@ -139,7 +144,9 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
         external_source: payload.externalSource || null,
         external_id: payload.externalId || null,
         recurrence_series_id: previous?.recurrence_series_id ?? null,
-        participants: [{ id: current.id, name: current.name, color: current.color }],
+        participants: calendarProfiles.filter((profile) =>
+          (payload.participantIds as string[]).includes(profile.id)
+        ),
         recurrence: null,
         created_at: previous?.created_at ?? '2026-08-09T00:00:00.000Z',
         updated_at: '2026-08-09T00:00:00.000Z'

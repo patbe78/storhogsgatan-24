@@ -70,7 +70,7 @@ test('månadsvyn använder mobilbredden utan overflow och har sticky rubrik', as
     page.getByRole('button', { name: /Åsa sjukskriven 50%.*Heldagsaktivitet/ })
   ).toHaveCount(3)
   await expect(page.getByRole('button', { name: /Karlstad.*Heldagsaktivitet/ })).toBeVisible()
-  const timed = page.getByRole('button', { name: /Jobb/ })
+  const timed = page.getByRole('button', { name: /^Jobb,/ })
   const allDay = page.getByRole('button', { name: /Åsa sjukskriven 50%.*Heldagsaktivitet/ }).first()
   const [timedTypography, allDayTypography] = await Promise.all(
     [timed, allDay].map((locator) =>

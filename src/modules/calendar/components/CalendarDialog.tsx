@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { useCalendarScrollLock } from '../hooks/useCalendarScrollLock'
 
@@ -15,6 +15,7 @@ export function CalendarDialog({
 }) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLElement>(null)
+  const titleId = useId()
   useCalendarScrollLock(open)
   useEffect(() => {
     if (!open) return
@@ -59,11 +60,11 @@ export function CalendarDialog({
         className="calendar-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="calendar-dialog-title"
+        aria-labelledby={titleId}
         onKeyDown={handleKeyDown}
       >
         <header>
-          <h2 id="calendar-dialog-title">{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           <button
             ref={closeRef}
             type="button"
