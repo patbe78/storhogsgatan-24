@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import type {
   CalendarEvent,
@@ -30,6 +30,7 @@ import { CalendarSwipeSurface } from '../components/CalendarSwipeSurface'
 import { CalendarStatus } from '../components/CalendarStatus'
 import { CalendarDialog } from '../components/CalendarDialog'
 import { CalendarEventForm } from '../components/CalendarEventForm'
+import { JobShiftQuickEntryForm } from '../components/JobShiftQuickEntryForm'
 import { CalendarEventDetails } from '../components/CalendarEventDetails'
 import { CalendarConflictWarning } from '../components/CalendarConflictWarning'
 import { RecurringEventActionDialog } from '../components/RecurringEventActionDialog'
@@ -37,7 +38,7 @@ import { CalendarCategoryManager } from '../components/CalendarCategoryManager'
 import type { CalendarConflict } from '../utils/calendar-conflict'
 import '../calendar.css'
 
-type Mode = 'closed' | 'create' | 'details' | 'edit' | 'categories'
+type Mode = 'closed' | 'create' | 'quick-job-shift' | 'details' | 'edit' | 'categories'
 
 export function CalendarPage() {
   const [params, setParams] = useSearchParams()
@@ -59,14 +60,21 @@ export function CalendarPage() {
   const [selected, setSelected] = useState<CalendarViewItem | null>(null)
   const [initialDate, setInitialDate] = useState<string>()
   const [pending, setPending] = useState<CalendarEventInput | null>(null)
+  const [pendingMode, setPendingMode] = useState<'regular' | 'quick-job-shift' | null>(null)
   const [conflicts, setConflicts] = useState<CalendarConflict[]>([])
   const [seriesAction, setSeriesAction] = useState<'redigera' | 'radera' | null>(null)
   const [editScope, setEditScope] = useState<RecurringActionScope>('series')
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [actionError, setActionError] = useState('')
+  const [quickSuccess, setQuickSuccess] = useState(false)
   const linkedItem = model.items.find((candidate) => candidate.key === params.get('event')) ?? null
   const activeSelected = selected ?? linkedItem
   const activeMode: Mode = mode === 'closed' && linkedItem ? 'details' : mode
+  useEffect(() => {
+    if (!quickSuccess) return
+    const timeout = window.setTimeout(() => setQuickSuccess(false), 1500)
+    return () => window.clearTimeout(timeout)
+  }, [quickSuccess])
   const selectableProfiles = [...(profiles.data ?? [])]
   if (
     permissions.profile &&
@@ -101,9 +109,11 @@ export function CalendarPage() {
     setMode('closed')
     setSelected(null)
     setPending(null)
+    setPendingMode(null)
     setConflicts([])
     setSeriesAction(null)
     setActionError('')
+    setQuickSuccess(false)
     setParams({})
   }
   function selectItem(item: CalendarViewItem) {
@@ -115,6 +125,13 @@ export function CalendarPage() {
     setInitialDate(date)
     setSelected(null)
     setMode('create')
+  }
+
+  function createJobShift() {
+    setSelected(null)
+    setActionError('')
+    setQuickSuccess(false)
+    setMode('quick-job-shift')
   }
 
   function candidateFor(input: CalendarEventInput): CalendarOccurrence {
@@ -156,6 +173,7 @@ export function CalendarPage() {
       const found = await checkCalendarConflicts(candidateFor(input))
       if (found.length) {
         setPending(input)
+        setPendingMode('regular')
         setConflicts(found)
         return
       }
@@ -163,6 +181,32 @@ export function CalendarPage() {
     } catch (error) {
       setActionError(friendlyCalendarError(error))
     }
+  }
+
+  async function submitQuickJobShift(input: CalendarEventInput) {
+    setActionError('')
+    setQuickSuccess(false)
+    try {
+      const found = await checkCalendarConflicts(candidateFor(input))
+      if (found.length) {
+        setPending(input)
+        setPendingMode('quick-job-shift')
+        setConflicts(found)
+        return
+      }
+      await persistQuickJobShift(input)
+    } catch (error) {
+      setActionError(friendlyCalendarError(error))
+    }
+  }
+
+  async function persistQuickJobShift(input: CalendarEventInput) {
+    await mutations.save.mutateAsync(input)
+    setPending(null)
+    setPendingMode(null)
+    setConflicts([])
+    setActionError('')
+    setQuickSuccess(true)
   }
 
   async function persist(input: CalendarEventInput) {
@@ -180,7 +224,8 @@ export function CalendarPage() {
   async function persistDespiteConflict() {
     if (!pending) return
     try {
-      await persist(pending)
+      if (pendingMode === 'quick-job-shift') await persistQuickJobShift(pending)
+      else await persist(pending)
     } catch (error) {
       setConflicts([])
       setActionError(friendlyCalendarError(error))
@@ -260,8 +305,9 @@ export function CalendarPage() {
         onNext={navigation.next}
         onToday={navigation.today}
         onCreate={() => createAt()}
+        onCreateJobShift={createJobShift}
       />
-      {actionError && (
+      {actionError && activeMode !== 'quick-job-shift' && (
         <p className="calendar-action-error" role="alert">
           {actionError}
         </p>
@@ -363,6 +409,22 @@ export function CalendarPage() {
         />
       </CalendarDialog>
       <CalendarDialog
+        title="Lägg till jobbpass"
+        open={activeMode === 'quick-job-shift'}
+        onClose={closeDialog}
+      >
+        <JobShiftQuickEntryForm
+          profiles={selectableProfiles}
+          categories={categories.data ?? []}
+          permissions={permissions}
+          busy={mutations.save.isPending}
+          success={quickSuccess}
+          error={actionError}
+          onSubmit={submitQuickJobShift}
+          onClose={closeDialog}
+        />
+      </CalendarDialog>
+      <CalendarDialog
         title={activeSelected?.title ?? 'Aktivitet'}
         open={activeMode === 'details'}
         onClose={closeDialog}
@@ -377,7 +439,7 @@ export function CalendarPage() {
         )}
       </CalendarDialog>
       <CalendarDialog
-        title="Tidskonflikt"
+        title={pendingMode === 'quick-job-shift' ? 'Överlappande jobbpass' : 'Tidskonflikt'}
         open={conflicts.length > 0}
         onClose={() => setConflicts([])}
       >
@@ -385,6 +447,8 @@ export function CalendarPage() {
           conflicts={conflicts}
           onBack={() => setConflicts([])}
           onSave={() => void persistDespiteConflict()}
+          backLabel={pendingMode === 'quick-job-shift' ? 'Avbryt' : undefined}
+          busy={mutations.save.isPending || mutations.split.isPending}
         />
       </CalendarDialog>
       <CalendarDialog

@@ -15,7 +15,8 @@ export function CalendarToolbar({
   onPrevious,
   onNext,
   onToday,
-  onCreate
+  onCreate,
+  onCreateJobShift
 }: {
   title: string
   view: CalendarView
@@ -24,6 +25,7 @@ export function CalendarToolbar({
   onNext: () => void
   onToday: () => void
   onCreate: () => void
+  onCreateJobShift: () => void
 }) {
   return (
     <header className="calendar-toolbar">
@@ -57,9 +59,18 @@ export function CalendarToolbar({
             </button>
           ))}
         </div>
-        <button type="button" className="primary-button new-event-button" onClick={onCreate}>
-          <Plus size={18} /> Ny aktivitet
-        </button>
+        <div className="calendar-create-actions">
+          <button
+            type="button"
+            className="secondary-button job-shift-button"
+            onClick={onCreateJobShift}
+          >
+            <Plus size={18} /> Jobbpass
+          </button>
+          <button type="button" className="primary-button new-event-button" onClick={onCreate}>
+            <Plus size={18} /> Ny aktivitet
+          </button>
+        </div>
       </div>
     </header>
   )

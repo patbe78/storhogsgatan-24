@@ -95,7 +95,7 @@ test('månadsvyn navigerar, segmenterar, öppnar aktiviteter och filtrerar i rä
   const monthHeading = page.getByRole('heading', { name: 'Augusti 2026', exact: true })
   await expect(monthHeading).toBeVisible()
   await expect(page.getByLabel('Vecka 32')).toContainText('v32')
-  const timed = page.getByRole('button', { name: /Jobb/ })
+  const timed = page.getByRole('button', { name: /^Jobb,/ })
   const allDay = page.getByRole('button', { name: /Åsa sjukskriven 50%.*Heldagsaktivitet/ }).first()
   await expect(timed).toBeVisible()
   await expect(page.getByRole('button', { name: /Längre tidsbestämd aktivitet/ })).toBeVisible()
@@ -152,7 +152,7 @@ test('månadsvyn navigerar, segmenterar, öppnar aktiviteter och filtrerar i rä
 
   await page.getByRole('button', { name: 'Avmarkera allt', exact: true }).click()
   await page.getByLabel('Patrik – Arbete – döljs').check()
-  await expect(page.getByRole('button', { name: /Jobb/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /^Jobb,/ })).toBeVisible()
   await expect(
     page.getByRole('button', { name: /Åsa sjukskriven 50%.*Heldagsaktivitet/ })
   ).toHaveCount(0)
