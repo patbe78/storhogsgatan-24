@@ -85,6 +85,7 @@ function mapRow(row: CalendarRpcRow): CalendarEventWithRule {
         startsOn: String(raw.starts_on),
         endsOn: raw.ends_on ? String(raw.ends_on) : null,
         occurrenceCount: raw.occurrence_count == null ? null : Number(raw.occurrence_count),
+        weekdays: Array.isArray(raw.weekdays) ? raw.weekdays.map(Number) : null,
         parentSeriesId: raw.parent_series_id ? String(raw.parent_series_id) : null,
         splitFromDate: raw.split_from_date ? String(raw.split_from_date) : null
       }

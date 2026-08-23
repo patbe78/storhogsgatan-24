@@ -231,6 +231,33 @@ describe('CalendarEventForm', () => {
     )
   })
 
+  it('bevarar weekday-data när en befintlig serie redigeras', async () => {
+    render(
+      <CalendarEventForm
+        {...props}
+        event={event()}
+        initialRecurrence={{
+          id: 'series-weekdays',
+          frequency: 'weekly',
+          intervalValue: 1,
+          startsOn: '2026-08-10',
+          endsOn: '2026-09-30',
+          occurrenceCount: null,
+          weekdays: [1, 2, 3, 4, 5],
+          parentSeriesId: null,
+          splitFromDate: null
+        }}
+      />
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Spara' }))
+    expect(props.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recurrence: expect.objectContaining({ weekdays: [1, 2, 3, 4, 5] })
+      })
+    )
+  })
+
   it('förhindrar dubbel-save medan requesten pågår', async () => {
     let resolveSubmit: (() => void) | undefined
     const onSubmit = vi.fn(

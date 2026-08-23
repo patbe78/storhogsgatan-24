@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
 import { JobShiftQuickEntryForm } from '../components/JobShiftQuickEntryForm'
@@ -37,7 +37,8 @@ describe('JobShiftQuickEntryForm', () => {
   it('visar rätt standardvärden och endast det fokuserade snabbflödet', () => {
     render(<JobShiftQuickEntryForm {...props()} />)
 
-    expect(screen.getByLabelText('Titel *')).toHaveValue('Jobb')
+    expect(screen.queryByText('Titel *')).not.toBeInTheDocument()
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.getByRole('group', { name: 'Deltagare *' })).toHaveTextContent('Patrik')
     expect((screen.getByLabelText('Startdatum *') as HTMLInputElement).value).toMatch(
       /^\d{4}-\d{2}-\d{2}$/
@@ -45,6 +46,8 @@ describe('JobShiftQuickEntryForm', () => {
     expect(screen.getByLabelText('Starttid *')).toHaveValue('09:00')
     expect(screen.getByLabelText('Sluttid *')).toHaveValue('17:00')
     expect(screen.getAllByRole('button', { name: /timmar$/ })).toHaveLength(5)
+    expect(screen.getByRole('button', { name: /Återkommande Ingen återkommande/ })).toBeVisible()
+    expect(screen.queryByText('Till och med vecka')).not.toBeInTheDocument()
     expect(screen.queryByText('Kategori')).not.toBeInTheDocument()
     expect(screen.queryByText('Plats')).not.toBeInTheDocument()
     expect(screen.queryByText('Påminnelser')).not.toBeInTheDocument()
@@ -72,8 +75,6 @@ describe('JobShiftQuickEntryForm', () => {
   it('sparar med Arbete-ID och tomma valfria fält utan att återställa state', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined)
     const view = render(<JobShiftQuickEntryForm {...props({ onSubmit })} />)
-    await userEvent.clear(screen.getByLabelText('Titel *'))
-    await userEvent.type(screen.getByLabelText('Titel *'), 'Nattpass')
     fireEvent.change(screen.getByLabelText('Startdatum *'), { target: { value: '2026-08-21' } })
     fireEvent.change(screen.getByLabelText('Starttid *'), { target: { value: '21:30' } })
     fireEvent.change(screen.getByLabelText('Sluttid *'), { target: { value: '05:30' } })
@@ -81,7 +82,7 @@ describe('JobShiftQuickEntryForm', () => {
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
     expect(onSubmit.mock.calls[0][0]).toMatchObject({
-      title: 'Nattpass',
+      title: 'Jobb',
       categoryId: workCategory.id,
       location: '',
       notes: '',
@@ -95,10 +96,54 @@ describe('JobShiftQuickEntryForm', () => {
 
     view.rerender(<JobShiftQuickEntryForm {...props({ onSubmit, success: true })} />)
     expect(screen.getByText('Jobbpass sparat')).toBeInTheDocument()
-    expect(screen.getByLabelText('Titel *')).toHaveValue('Nattpass')
+    expect(screen.queryByText('Titel *')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Startdatum *')).toHaveValue('2026-08-21')
     expect(screen.getByLabelText('Starttid *')).toHaveValue('21:30')
     expect(screen.getByLabelText('Sluttid *')).toHaveValue('05:30')
+  })
+
+  it('väljer exakt en deltagare och ersätter det tidigare valet', async () => {
+    render(<JobShiftQuickEntryForm {...props()} />)
+    const participantGroup = screen.getByRole('group', { name: 'Deltagare *' })
+    await userEvent.click(within(participantGroup).getByRole('button', { name: 'Patrik' }))
+    const radios = screen.getAllByRole('radio', { name: /Patrik|Felix/ })
+    expect(radios.filter((radio) => (radio as HTMLInputElement).checked)).toHaveLength(1)
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Felix' }))
+    expect(screen.getByRole('radio', { name: 'Patrik' })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Felix' })).toBeChecked()
+    expect(radios.filter((radio) => (radio as HTMLInputElement).checked)).toHaveLength(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Klar' }))
+    expect(within(participantGroup).getByRole('button', { name: 'Felix' })).toBeVisible()
+  })
+
+  it('sparar vardagar som en weekly-serie och behåller recurrence-state', async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined)
+    const view = render(<JobShiftQuickEntryForm {...props({ onSubmit })} />)
+    fireEvent.change(screen.getByLabelText('Startdatum *'), { target: { value: '2026-08-26' } })
+    await userEvent.click(screen.getByRole('button', { name: /Återkommande Ingen återkommande/ }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Varje vardag (mån–fre)' }))
+    expect(screen.getByText('Till och med vecka')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Till och med vecka V35 2026/ })).toBeVisible()
+
+    await userEvent.click(screen.getByRole('button', { name: /Till och med vecka V35 2026/ }))
+    await userEvent.click(screen.getByRole('radio', { name: 'V36 2026' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Spara', exact: true }))
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1))
+    expect(onSubmit.mock.calls[0][0]).toMatchObject({
+      title: 'Jobb',
+      recurrence: {
+        frequency: 'weekly',
+        intervalValue: 1,
+        weekdays: [1, 2, 3, 4, 5],
+        endsOn: '2026-09-06',
+        occurrenceCount: null
+      }
+    })
+    view.rerender(<JobShiftQuickEntryForm {...props({ onSubmit, success: true })} />)
+    expect(screen.getByRole('button', { name: /Återkommande Varje vardag/ })).toBeVisible()
+    expect(screen.getByRole('button', { name: /Till och med vecka V36 2026/ })).toBeVisible()
   })
 
   it('blockerar save om systemkategorin Arbete saknas', async () => {

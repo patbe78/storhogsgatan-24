@@ -7,6 +7,7 @@ export function CalendarParticipantPicker({
   selected,
   family,
   allowFamily,
+  selectionMode = 'multiple',
   describedBy,
   onSelected,
   onFamily
@@ -15,13 +16,19 @@ export function CalendarParticipantPicker({
   selected: string[]
   family: boolean
   allowFamily: boolean
+  selectionMode?: 'multiple' | 'single'
   describedBy?: string
   onSelected: (ids: string[]) => void
   onFamily: (value: boolean) => void
 }) {
   const [open, setOpen] = useState(false)
-  const toggle = (id: string) =>
-    onSelected(selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id])
+  const toggle = (id: string) => {
+    if (selectionMode === 'single') onSelected([id])
+    else
+      onSelected(
+        selected.includes(id) ? selected.filter((value) => value !== id) : [...selected, id]
+      )
+  }
   const selectedProfiles = profiles.filter((profile) => selected.includes(profile.id))
   const summary = family
     ? 'Hela familjen'
@@ -62,11 +69,16 @@ export function CalendarParticipantPicker({
             </label>
           </div>
         )}
-        <div className="participant-picker">
+        <div
+          className="participant-picker"
+          role={selectionMode === 'single' ? 'radiogroup' : undefined}
+          aria-label={selectionMode === 'single' ? 'Deltagare' : undefined}
+        >
           {profiles.map((profile) => (
             <label className="participant-option calendar-sheet-option" key={profile.id}>
               <input
-                type="checkbox"
+                type={selectionMode === 'single' ? 'radio' : 'checkbox'}
+                name={selectionMode === 'single' ? 'calendar-participant' : undefined}
                 checked={selected.includes(profile.id)}
                 disabled={family}
                 onChange={() => toggle(profile.id)}

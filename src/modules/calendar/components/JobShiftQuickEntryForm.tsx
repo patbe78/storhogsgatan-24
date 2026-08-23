@@ -12,10 +12,17 @@ import {
   matchingJobShiftPreset
 } from '../utils/job-shift-quick-entry'
 import { validateParticipantPermission } from '../utils/calendar-permissions'
+import {
+  jobShiftEndWeeks,
+  jobShiftRecurrenceInput,
+  type JobShiftRecurrence
+} from '../utils/job-shift-recurrence'
 import { CalendarParticipantPicker } from './CalendarParticipantPicker'
+import { JobShiftRecurrenceFields } from './JobShiftRecurrenceFields'
+
+const JOB_SHIFT_TITLE = 'Jobb'
 
 type QuickEntryErrors = {
-  title?: string
   timing?: string
   participants?: string
   permission?: string
@@ -42,7 +49,6 @@ export function JobShiftQuickEntryForm({
   onClose: () => void
 }) {
   const today = toDateKey(new Date())
-  const [title, setTitle] = useState('Jobb')
   const [startDate, setStartDate] = useState(today)
   const [startTime, setStartTime] = useState('09:00')
   const [endTime, setEndTime] = useState(() => endTimeForJobShiftPreset(today, '09:00', 8))
@@ -50,15 +56,17 @@ export function JobShiftQuickEntryForm({
   const [participants, setParticipants] = useState(
     permissions.profile ? [permissions.profile.id] : []
   )
+  const [recurrence, setRecurrence] = useState<JobShiftRecurrence>('none')
+  const [endWeekKey, setEndWeekKey] = useState(() => jobShiftEndWeeks(today)[0]?.key ?? '')
   const [errors, setErrors] = useState<QuickEntryErrors>({})
   const [submitting, setSubmitting] = useState(false)
-  const titleId = useId()
   const startDateId = useId()
   const startTimeId = useId()
   const endTimeId = useId()
   const durationId = useId()
   const saving = busy || submitting
   const timing = jobShiftTiming(startDate, startTime, endTime)
+  const endWeeks = jobShiftEndWeeks(startDate)
 
   function applyPreset(hours: (typeof JOB_SHIFT_DURATION_PRESETS)[number]) {
     if (!startDate || !startTime) return
@@ -68,6 +76,10 @@ export function JobShiftQuickEntryForm({
 
   function updateStartDate(value: string) {
     setStartDate(value)
+    const nextWeeks = jobShiftEndWeeks(value)
+    setEndWeekKey((current) =>
+      nextWeeks.some((week) => week.key === current) ? current : (nextWeeks[0]?.key ?? '')
+    )
     if (activePreset && value && startTime)
       setEndTime(
         endTimeForJobShiftPreset(
@@ -76,6 +88,11 @@ export function JobShiftQuickEntryForm({
           activePreset as (typeof JOB_SHIFT_DURATION_PRESETS)[number]
         )
       )
+  }
+
+  function updateRecurrence(value: JobShiftRecurrence) {
+    if (recurrence === 'none' && value !== 'none') setEndWeekKey(endWeeks[0]?.key ?? '')
+    setRecurrence(value)
   }
 
   function updateStartTime(value: string) {
@@ -102,9 +119,8 @@ export function JobShiftQuickEntryForm({
     const workCategory = findWorkCategory(categories)
     const nextTiming = jobShiftTiming(startDate, startTime, endTime)
     const nextErrors: QuickEntryErrors = {}
-    if (!title.trim()) nextErrors.title = 'Ange en titel.'
     if (!nextTiming) nextErrors.timing = 'Ange ett giltigt startdatum samt start- och sluttid.'
-    if (!participants.length) nextErrors.participants = 'Välj minst en deltagare.'
+    if (participants.length !== 1) nextErrors.participants = 'Välj exakt en deltagare.'
     if (!workCategory)
       nextErrors.category = 'Systemkategorin Arbete kunde inte hittas. Jobbpasset har inte sparats.'
     if (permissions.profile)
@@ -114,7 +130,7 @@ export function JobShiftQuickEntryForm({
     if (Object.values(nextErrors).some(Boolean) || !nextTiming || !workCategory) return
 
     const input: CalendarEventInput = {
-      title: title.trim(),
+      title: JOB_SHIFT_TITLE,
       description: '',
       location: '',
       notes: '',
@@ -127,7 +143,10 @@ export function JobShiftQuickEntryForm({
       isFamilyEvent: false,
       participantIds: participants,
       reminderOffsetsMinutes: [],
-      recurrence: null,
+      recurrence: jobShiftRecurrenceInput(
+        recurrence,
+        endWeeks.find((week) => week.key === endWeekKey)
+      ),
       externalSource: '',
       externalId: ''
     }
@@ -161,24 +180,12 @@ export function JobShiftQuickEntryForm({
         </p>
       )}
 
-      <div className="form-field">
-        <label htmlFor={titleId}>Titel *</label>
-        <input
-          id={titleId}
-          data-calendar-dialog-initial-focus
-          maxLength={150}
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          aria-invalid={Boolean(errors.title)}
-        />
-        {errors.title && <span className="field-error">{errors.title}</span>}
-      </div>
-
       <div className="job-shift-time-grid">
         <div className="form-field">
           <label htmlFor={startDateId}>Startdatum *</label>
           <input
             id={startDateId}
+            data-calendar-dialog-initial-focus
             type="date"
             value={startDate}
             onChange={(event) => updateStartDate(event.target.value)}
@@ -231,6 +238,7 @@ export function JobShiftQuickEntryForm({
         selected={participants}
         family={false}
         allowFamily={false}
+        selectionMode="single"
         describedBy={
           errors.participants || errors.permission ? `${durationId}-participant-error` : undefined
         }
@@ -242,6 +250,14 @@ export function JobShiftQuickEntryForm({
           {errors.participants || errors.permission}
         </span>
       )}
+
+      <JobShiftRecurrenceFields
+        value={recurrence}
+        endWeeks={endWeeks}
+        endWeekKey={endWeekKey}
+        onValue={updateRecurrence}
+        onEndWeek={setEndWeekKey}
+      />
 
       <div className="dialog-actions job-shift-actions">
         <button type="button" className="secondary-button" disabled={saving} onClick={onClose}>

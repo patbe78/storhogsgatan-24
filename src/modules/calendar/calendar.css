@@ -536,7 +536,10 @@
   gap: 6px;
   font-weight: 650;
 }
-.calendar-event-form input:not([type='checkbox']),
+.calendar-event-form .field-label {
+  font-weight: 650;
+}
+.calendar-event-form input:not([type='checkbox']):not([type='radio']),
 .calendar-event-form select,
 .calendar-event-form textarea,
 .category-manager input {
@@ -836,8 +839,32 @@
 }
 .job-shift-time-grid {
   display: grid;
-  grid-template-columns: 1.35fr 1fr 1fr;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
+}
+.job-shift-time-grid > *,
+.job-shift-time-grid input[type='date'],
+.job-shift-time-grid input[type='time'] {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 48px;
+}
+.job-shift-recurrence-fields,
+.job-shift-recurrence-options {
+  display: grid;
+  gap: 12px;
+}
+.job-shift-week-wheel {
+  display: grid;
+  gap: 8px;
+  max-height: min(52dvh, 430px);
+  overflow-y: auto;
+  scroll-snap-type: y proximity;
+  overscroll-behavior: contain;
+  padding: 4px;
+}
+.job-shift-week-wheel .calendar-sheet-option {
+  scroll-snap-align: center;
 }
 .job-shift-duration {
   display: grid;
@@ -1105,7 +1132,7 @@
     box-shadow: 0 -10px 24px #1018280d;
   }
   .job-shift-time-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .job-shift-time-grid > :first-child {
     grid-column: 1 / -1;

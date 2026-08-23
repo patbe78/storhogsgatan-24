@@ -31,7 +31,11 @@ export function CalendarRecurrenceForm({
           <select
             value={value.frequency}
             onChange={(event) =>
-              onChange({ ...value, frequency: event.target.value as CalendarFrequency })
+              onChange({
+                ...value,
+                frequency: event.target.value as CalendarFrequency,
+                weekdays: event.target.value === 'weekly' ? (value.weekdays ?? null) : null
+              })
             }
           >
             <option value="daily">Dagligen</option>

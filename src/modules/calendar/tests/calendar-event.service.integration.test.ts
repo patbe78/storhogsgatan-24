@@ -3,7 +3,11 @@ import { vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ rpc: vi.fn() }))
 vi.mock('@/shared/services/supabase', () => ({ supabase: { rpc: mocks.rpc } }))
 
-import { deleteCalendarEvent, saveCalendarEvent } from '../services/calendar-event.service'
+import {
+  deleteCalendarEvent,
+  getCalendarEvents,
+  saveCalendarEvent
+} from '../services/calendar-event.service'
 import { splitCalendarSeries } from '../services/calendar-recurrence.service'
 import type { CalendarEventInput } from '../types/calendar-event'
 
@@ -52,5 +56,63 @@ describe('calendar event service integration contract', () => {
       p_prior_occurrences: 2,
       p_payload: input
     })
+  })
+  it('mappar weekday-listan från read-RPC utan att ändra NULL-semantiken', async () => {
+    const row = {
+      id: 'event-1',
+      household_id: 'household-1',
+      title: 'Jobb',
+      description: '',
+      location: null,
+      notes: null,
+      category_id: null,
+      category_name: null,
+      category_color: null,
+      created_by: 'profile-1',
+      updated_by: 'profile-1',
+      starts_at: '2026-08-12T07:00:00Z',
+      ends_at: '2026-08-12T15:00:00Z',
+      all_day: false,
+      all_day_start: null,
+      all_day_end: null,
+      is_family_event: false,
+      reminder_offsets_minutes: [],
+      reminder_offset_minutes: null,
+      external_source: null,
+      external_id: null,
+      recurrence_series_id: 'series-1',
+      participants: [],
+      recurrence: {
+        id: 'series-1',
+        frequency: 'weekly',
+        interval_value: 1,
+        starts_on: '2026-08-12',
+        ends_on: '2026-08-31',
+        occurrence_count: null,
+        weekdays: [1, 2, 3, 4, 5],
+        parent_series_id: null,
+        split_from_date: null
+      },
+      created_at: '2026-08-01T00:00:00Z',
+      updated_at: '2026-08-01T00:00:00Z'
+    }
+    mocks.rpc.mockResolvedValueOnce({ data: [row], error: null })
+    await expect(
+      getCalendarEvents(new Date('2026-08-01'), new Date('2026-09-01'))
+    ).resolves.toEqual([
+      expect.objectContaining({
+        recurrence: expect.objectContaining({ weekdays: [1, 2, 3, 4, 5] })
+      })
+    ])
+
+    mocks.rpc.mockResolvedValueOnce({
+      data: [{ ...row, recurrence: { ...row.recurrence, weekdays: null } }],
+      error: null
+    })
+    await expect(
+      getCalendarEvents(new Date('2026-08-01'), new Date('2026-09-01'))
+    ).resolves.toEqual([
+      expect.objectContaining({ recurrence: expect.objectContaining({ weekdays: null }) })
+    ])
   })
 })

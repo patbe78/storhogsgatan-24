@@ -36,6 +36,14 @@ export function validateCalendarEvent(input: CalendarEventInput): CalendarValida
       errors.recurrence = 'Välj antingen slutdatum eller antal förekomster.'
     else if (rule.occurrenceCount != null && rule.occurrenceCount <= 0)
       errors.recurrence = 'Antalet förekomster måste vara större än noll.'
+    else if (
+      rule.weekdays != null &&
+      (rule.frequency !== 'weekly' ||
+        rule.weekdays.length === 0 ||
+        new Set(rule.weekdays).size !== rule.weekdays.length ||
+        rule.weekdays.some((weekday) => !Number.isInteger(weekday) || weekday < 1 || weekday > 7))
+    )
+      errors.recurrence = 'Veckodagar måste vara unika ISO-dagar mellan 1 och 7.'
   }
   return errors
 }

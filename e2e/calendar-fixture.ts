@@ -120,6 +120,16 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
           : `aaaaaaaa-aaaa-4aaa-8aaa-${String(savedEventCount).padStart(12, '0')}`)
       const category = calendarCategories.find((item) => item.id === payload.categoryId)
       const previous = calendarEvents.find((item) => item.id === id)
+      const recurrenceInput = payload.recurrence as {
+        frequency: string
+        intervalValue: number
+        endsOn?: string | null
+        occurrenceCount?: number | null
+        weekdays?: number[] | null
+      } | null
+      const recurrenceSeriesId = recurrenceInput
+        ? (previous?.recurrence_series_id ?? `55555555-5555-4555-8555-${id.slice(-12)}`)
+        : null
       const row: Record<string, unknown> = {
         id,
         household_id: householdId,
@@ -143,11 +153,23 @@ export async function mockSupabase(page: Page, profileOptions: CalendarFixtureOp
         reminder_offset_minutes: null,
         external_source: payload.externalSource || null,
         external_id: payload.externalId || null,
-        recurrence_series_id: previous?.recurrence_series_id ?? null,
+        recurrence_series_id: recurrenceSeriesId,
         participants: calendarProfiles.filter((profile) =>
           (payload.participantIds as string[]).includes(profile.id)
         ),
-        recurrence: null,
+        recurrence: recurrenceInput
+          ? {
+              id: recurrenceSeriesId,
+              frequency: recurrenceInput.frequency,
+              interval_value: recurrenceInput.intervalValue,
+              starts_on: String(payload.startsAt).slice(0, 10),
+              ends_on: recurrenceInput.endsOn ?? null,
+              occurrence_count: recurrenceInput.occurrenceCount ?? null,
+              weekdays: recurrenceInput.weekdays ?? null,
+              parent_series_id: null,
+              split_from_date: null
+            }
+          : null,
         created_at: previous?.created_at ?? '2026-08-09T00:00:00.000Z',
         updated_at: '2026-08-09T00:00:00.000Z'
       }

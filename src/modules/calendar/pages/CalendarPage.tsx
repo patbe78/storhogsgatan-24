@@ -7,10 +7,17 @@ import type {
   RecurringActionScope
 } from '../types/calendar-event'
 import type { CalendarViewItem } from '../types/calendar-view'
-import { addDays, calendarRange, parseISO, toDateKey } from '../utils/calendar-dates'
+import { addDays, allDayBounds, calendarRange, parseISO, toDateKey } from '../utils/calendar-dates'
 import { friendlyCalendarError } from '../utils/calendar-errors'
-import { occurrencesBefore, singleOccurrence } from '../utils/calendar-recurrence'
-import { checkCalendarConflicts } from '../services/calendar-conflict.service'
+import {
+  generateOccurrences,
+  occurrencesBefore,
+  singleOccurrence
+} from '../utils/calendar-recurrence'
+import {
+  checkCalendarConflicts,
+  checkCalendarSeriesConflicts
+} from '../services/calendar-conflict.service'
 import { useCalendarNavigation } from '../hooks/useCalendarNavigation'
 import { useCalendarFilters } from '../hooks/useCalendarFilters'
 import { useCalendarDefaultFilter } from '../hooks/useCalendarDefaultFilter'
@@ -62,6 +69,7 @@ export function CalendarPage() {
   const [pending, setPending] = useState<CalendarEventInput | null>(null)
   const [pendingMode, setPendingMode] = useState<'regular' | 'quick-job-shift' | null>(null)
   const [conflicts, setConflicts] = useState<CalendarConflict[]>([])
+  const [conflictingJobShiftCount, setConflictingJobShiftCount] = useState(0)
   const [seriesAction, setSeriesAction] = useState<'redigera' | 'radera' | null>(null)
   const [editScope, setEditScope] = useState<RecurringActionScope>('series')
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -111,6 +119,7 @@ export function CalendarPage() {
     setPending(null)
     setPendingMode(null)
     setConflicts([])
+    setConflictingJobShiftCount(0)
     setSeriesAction(null)
     setActionError('')
     setQuickSuccess(false)
@@ -167,6 +176,29 @@ export function CalendarPage() {
     return singleOccurrence(event)
   }
 
+  function candidatesFor(input: CalendarEventInput): CalendarOccurrence[] {
+    const first = candidateFor(input)
+    if (!input.recurrence) return [first]
+    const rule = {
+      id: 'new-series',
+      frequency: input.recurrence.frequency,
+      intervalValue: input.recurrence.intervalValue,
+      startsOn: first.occurrenceDate,
+      endsOn: input.recurrence.endsOn ?? null,
+      occurrenceCount: input.recurrence.occurrenceCount ?? null,
+      weekdays: input.recurrence.weekdays ?? null,
+      parentSeriesId: null,
+      splitFromDate: null
+    }
+    const endKey = rule.endsOn ?? first.occurrenceDate
+    return generateOccurrences(
+      first.event,
+      rule,
+      parseISO(first.startsAt),
+      parseISO(allDayBounds(endKey, endKey).end)
+    )
+  }
+
   async function submit(input: CalendarEventInput) {
     setActionError('')
     try {
@@ -187,11 +219,12 @@ export function CalendarPage() {
     setActionError('')
     setQuickSuccess(false)
     try {
-      const found = await checkCalendarConflicts(candidateFor(input))
-      if (found.length) {
+      const found = await checkCalendarSeriesConflicts(candidatesFor(input))
+      if (found.conflicts.length) {
         setPending(input)
         setPendingMode('quick-job-shift')
-        setConflicts(found)
+        setConflicts(found.conflicts)
+        setConflictingJobShiftCount(found.conflictingOccurrenceCount)
         return
       }
       await persistQuickJobShift(input)
@@ -205,6 +238,7 @@ export function CalendarPage() {
     setPending(null)
     setPendingMode(null)
     setConflicts([])
+    setConflictingJobShiftCount(0)
     setActionError('')
     setQuickSuccess(true)
   }
@@ -441,13 +475,22 @@ export function CalendarPage() {
       <CalendarDialog
         title={pendingMode === 'quick-job-shift' ? 'Överlappande jobbpass' : 'Tidskonflikt'}
         open={conflicts.length > 0}
-        onClose={() => setConflicts([])}
+        onClose={() => {
+          setConflicts([])
+          setConflictingJobShiftCount(0)
+        }}
       >
         <CalendarConflictWarning
           conflicts={conflicts}
-          onBack={() => setConflicts([])}
+          onBack={() => {
+            setConflicts([])
+            setConflictingJobShiftCount(0)
+          }}
           onSave={() => void persistDespiteConflict()}
           backLabel={pendingMode === 'quick-job-shift' ? 'Avbryt' : undefined}
+          conflictingOccurrenceCount={
+            pendingMode === 'quick-job-shift' ? conflictingJobShiftCount : undefined
+          }
           busy={mutations.save.isPending || mutations.split.isPending}
         />
       </CalendarDialog>

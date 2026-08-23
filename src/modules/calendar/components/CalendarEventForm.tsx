@@ -72,7 +72,8 @@ export function CalendarEventForm({
           frequency: initialRecurrence.frequency,
           intervalValue: initialRecurrence.intervalValue,
           endsOn: initialRecurrence.endsOn,
-          occurrenceCount: initialRecurrence.occurrenceCount
+          occurrenceCount: initialRecurrence.occurrenceCount,
+          weekdays: initialRecurrence.weekdays
         }
       : null
   )

@@ -59,18 +59,21 @@ test('jobbpass har fokuserade standardvärden och kan spara flera pass i samma s
   await login(page, { calendarCategories: [workCategory] })
   const dialog = await openQuickEntry(page)
 
-  await expect(dialog.getByLabel('Titel *')).toHaveValue('Jobb')
-  await expect(dialog.getByLabel('Startdatum *')).toHaveValue('2026-08-19')
+  await expect(dialog.getByText('Titel *')).toHaveCount(0)
+  await expect(dialog.getByLabel('Startdatum *')).toHaveValue(/^\d{4}-\d{2}-\d{2}$/)
   await expect(dialog.getByLabel('Starttid *')).toHaveValue('09:00')
   await expect(dialog.getByLabel('Sluttid *')).toHaveValue('17:00')
   await expect(dialog.getByRole('group', { name: 'Deltagare *' })).toContainText('Patrik')
   await expect(dialog.getByRole('button', { name: /timmar$/ })).toHaveCount(5)
+  await expect(
+    dialog.getByRole('button', { name: /Återkommande Ingen återkommande/ })
+  ).toBeVisible()
+  await expect(dialog.getByText('Till och med vecka')).toHaveCount(0)
   await expect(dialog.getByText('Kategori')).toHaveCount(0)
   await expect(dialog.getByText('Plats')).toHaveCount(0)
   await expect(dialog.getByText('Påminnelser')).toHaveCount(0)
   await expect(dialog.getByText('Anteckning')).toHaveCount(0)
 
-  await dialog.getByLabel('Titel *').fill('Nattpass')
   await dialog.getByLabel('Startdatum *').fill('2026-08-21')
   await dialog.getByLabel('Starttid *').fill('21:30')
   await dialog.getByLabel('Sluttid *').fill('05:30')
@@ -82,7 +85,7 @@ test('jobbpass har fokuserade standardvärden och kan spara flera pass i samma s
   await dialog.getByRole('button', { name: 'Spara', exact: true }).click()
   const firstPayload = (await firstSave).postDataJSON().p_payload
   expect(firstPayload).toMatchObject({
-    title: 'Nattpass',
+    title: 'Jobb',
     categoryId: workCategoryId,
     location: '',
     notes: '',
@@ -91,7 +94,6 @@ test('jobbpass har fokuserade standardvärden och kan spara flera pass i samma s
   })
   expect(Date.parse(firstPayload.endsAt) - Date.parse(firstPayload.startsAt)).toBe(8 * 60 * 60_000)
   await expect(dialog.getByText('Jobbpass sparat')).toBeVisible()
-  await expect(dialog.getByLabel('Titel *')).toHaveValue('Nattpass')
   await expect(dialog.getByLabel('Startdatum *')).toHaveValue('2026-08-21')
   await expect(dialog.getByLabel('Starttid *')).toHaveValue('21:30')
   await expect(dialog.getByLabel('Sluttid *')).toHaveValue('05:30')
@@ -108,11 +110,11 @@ test('jobbpass har fokuserade standardvärden och kan spara flera pass i samma s
   await expect(dialog).toHaveCount(0)
 
   const workFilter = page.getByLabel('Patrik – Arbete – visas')
-  await expect(page.getByRole('button', { name: /^Nattpass,/ })).toHaveCount(2)
+  await expect(page.getByRole('button', { name: /^Jobb,/ })).toHaveCount(2)
   await workFilter.uncheck()
-  await expect(page.getByRole('button', { name: /^Nattpass,/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /^Jobb,/ })).toHaveCount(0)
   await page.getByRole('link', { name: 'Dashboard' }).click()
-  await expect(page.getByText('Nattpass').first()).toBeVisible()
+  await expect(page.getByText('Jobb').first()).toBeVisible()
 })
 
 test('konflikt per deltagare kräver aktiv bekräftelse och bevarar formuläret vid Avbryt', async ({
@@ -148,7 +150,7 @@ test('konflikt per deltagare kräver aktiv bekräftelse och bevarar formuläret 
   })
   await dialog.getByRole('button', { name: 'Spara', exact: true }).click()
   const warning = page.getByRole('dialog', { name: 'Överlappande jobbpass' })
-  await expect(warning).toContainText('Patrik och Åsa')
+  await expect(warning).toContainText('1 jobbpass överlappar befintliga aktiviteter.')
   expect(saves).toBe(0)
   await warning.getByRole('button', { name: 'Avbryt' }).click()
   await expect(warning).toHaveCount(0)
@@ -196,24 +198,92 @@ test('återkommande faktisk occurrence orsakar konflikt för rätt deltagare', a
   await dialog.getByLabel('Starttid *').fill('12:00')
   await dialog.getByRole('group', { name: 'Deltagare *' }).getByRole('button').click()
   const participantSheet = page.getByRole('dialog', { name: 'Deltagare' })
-  await participantSheet.getByLabel('Patrik').uncheck()
   await participantSheet.getByLabel('Felix').check()
   await participantSheet.getByRole('button', { name: 'Klar' }).click()
   await dialog.getByRole('button', { name: 'Spara', exact: true }).click()
 
-  await expect(page.getByRole('dialog', { name: 'Överlappande jobbpass' })).toContainText('Felix')
+  await expect(page.getByRole('dialog', { name: 'Överlappande jobbpass' })).toContainText(
+    '1 jobbpass överlappar befintliga aktiviteter.'
+  )
 })
 
 test('save-fel lämnar alla värden kvar och visar ingen success', async ({ page }) => {
   await login(page, { calendarCategories: [workCategory], calendarSaveFailures: 1 })
   const dialog = await openQuickEntry(page)
-  await dialog.getByLabel('Titel *').fill('Extra pass')
   await dialog.getByLabel('Startdatum *').fill('2026-08-20')
   await dialog.getByRole('button', { name: 'Spara', exact: true }).click()
 
   await expect(dialog.getByRole('alert')).toBeVisible()
   await expect(dialog.getByText('Jobbpass sparat')).toHaveCount(0)
-  await expect(dialog.getByLabel('Titel *')).toHaveValue('Extra pass')
+  await expect(dialog.getByText('Titel *')).toHaveCount(0)
   await expect(dialog.getByLabel('Startdatum *')).toHaveValue('2026-08-20')
   await expect(dialog.getByRole('button', { name: 'Spara', exact: true })).toBeEnabled()
+})
+
+test('vardagsserie sparas atomiskt som en weekly-serie med korrekt slutvecka', async ({ page }) => {
+  await login(page, { calendarCategories: [workCategory] })
+  const dialog = await openQuickEntry(page)
+  await dialog.getByLabel('Startdatum *').fill('2026-08-26')
+  await dialog.getByRole('button', { name: /Återkommande Ingen återkommande/ }).click()
+  await page
+    .getByRole('dialog', { name: 'Återkommande' })
+    .getByLabel('Varje vardag (mån–fre)')
+    .click()
+  await expect(dialog.getByRole('button', { name: /Till och med vecka V35 2026/ })).toBeVisible()
+  await dialog.getByRole('button', { name: /Till och med vecka V35 2026/ }).click()
+  await page.getByRole('dialog', { name: 'Till och med vecka' }).getByLabel('V36 2026').click()
+
+  const save = page.waitForRequest((request) => request.url().includes('/rpc/calendar_save_event'))
+  await dialog.getByRole('button', { name: 'Spara', exact: true }).click()
+  const payload = (await save).postDataJSON().p_payload
+  expect(payload).toMatchObject({
+    title: 'Jobb',
+    recurrence: {
+      frequency: 'weekly',
+      intervalValue: 1,
+      weekdays: [1, 2, 3, 4, 5],
+      endsOn: '2026-09-06',
+      occurrenceCount: null
+    }
+  })
+  await expect(dialog.getByRole('button', { name: /Återkommande Varje vardag/ })).toBeVisible()
+  await expect(dialog.getByRole('button', { name: /Till och med vecka V36 2026/ })).toBeVisible()
+})
+
+test('konfliktkontroll summerar faktiska occurrences i en vardagsserie', async ({ page }) => {
+  await login(page, {
+    calendarCategories: [workCategory],
+    calendarEvents: [
+      calendarEvent({
+        starts_at: '2026-08-26T07:00:00.000Z',
+        ends_at: '2026-08-26T15:00:00.000Z',
+        recurrence_series_id: '55555555-5555-4555-8555-555555555556',
+        recurrence: {
+          id: '55555555-5555-4555-8555-555555555556',
+          frequency: 'weekly',
+          interval_value: 1,
+          starts_on: '2026-08-26',
+          ends_on: '2026-09-06',
+          occurrence_count: null,
+          weekdays: [1, 2, 3, 4, 5],
+          parent_series_id: null,
+          split_from_date: null
+        }
+      })
+    ]
+  })
+  const dialog = await openQuickEntry(page)
+  await dialog.getByLabel('Startdatum *').fill('2026-08-26')
+  await dialog.getByRole('button', { name: /Återkommande Ingen återkommande/ }).click()
+  await page
+    .getByRole('dialog', { name: 'Återkommande' })
+    .getByLabel('Varje vardag (mån–fre)')
+    .click()
+  await dialog.getByRole('button', { name: /Till och med vecka V35 2026/ }).click()
+  await page.getByRole('dialog', { name: 'Till och med vecka' }).getByLabel('V36 2026').click()
+  await dialog.getByRole('button', { name: 'Spara', exact: true }).click()
+
+  await expect(page.getByRole('dialog', { name: 'Överlappande jobbpass' })).toContainText(
+    '8 jobbpass överlappar befintliga aktiviteter.'
+  )
 })

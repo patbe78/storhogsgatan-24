@@ -12,6 +12,7 @@ function rule(overrides: Partial<CalendarRecurrenceRule> = {}): CalendarRecurren
     startsOn: '2026-08-10',
     endsOn: null,
     occurrenceCount: 5,
+    weekdays: null,
     parentSeriesId: null,
     splitFromDate: null,
     ...overrides
@@ -37,6 +38,55 @@ describe('calendar recurrence', () => {
       rangeEnd
     )
     expect(Date.parse(items[1].startsAt) - Date.parse(items[0].startsAt)).toBe(14 * 86400000)
+  })
+  it('genererar en vardagsserie från startdatumet och aldrig tidigare i första veckan', () => {
+    const items = generateOccurrences(
+      event({ startsAt: '2026-08-12T07:00:00.000Z', endsAt: '2026-08-12T15:00:00.000Z' }),
+      rule({
+        frequency: 'weekly',
+        startsOn: '2026-08-12',
+        endsOn: '2026-08-21',
+        occurrenceCount: null,
+        weekdays: [1, 2, 3, 4, 5]
+      }),
+      new Date('2026-08-09T00:00:00.000Z'),
+      new Date('2026-08-23T00:00:00.000Z')
+    )
+
+    expect(items.map((item) => item.occurrenceDate)).toEqual([
+      '2026-08-12',
+      '2026-08-13',
+      '2026-08-14',
+      '2026-08-17',
+      '2026-08-18',
+      '2026-08-19',
+      '2026-08-20',
+      '2026-08-21'
+    ])
+  })
+  it('stödjer valda veckodagar med veckointervall utan dubbletter', () => {
+    const items = generateOccurrences(
+      event(),
+      rule({
+        frequency: 'weekly',
+        intervalValue: 2,
+        endsOn: '2026-09-06',
+        occurrenceCount: null,
+        weekdays: [1, 3, 5]
+      }),
+      rangeStart,
+      rangeEnd
+    )
+
+    expect(items.map((item) => item.occurrenceDate)).toEqual([
+      '2026-08-10',
+      '2026-08-12',
+      '2026-08-14',
+      '2026-08-24',
+      '2026-08-26',
+      '2026-08-28'
+    ])
+    expect(new Set(items.map((item) => item.key)).size).toBe(items.length)
   })
   it('bevarar lokal Stockholmstid över sommartidsbyte', () => {
     const items = generateOccurrences(
@@ -145,4 +195,17 @@ describe('calendar recurrence', () => {
         '2026-08-31'
       )
     ).toBe(3))
+  it('räknar weekday-förekomster före splitdatum', () =>
+    expect(
+      occurrencesBefore(
+        rule({
+          frequency: 'weekly',
+          startsOn: '2026-08-12',
+          occurrenceCount: null,
+          weekdays: [1, 2, 3, 4, 5]
+        }),
+        new Date('2026-08-12T07:00:00.000Z'),
+        '2026-08-18'
+      )
+    ).toBe(4))
 })
