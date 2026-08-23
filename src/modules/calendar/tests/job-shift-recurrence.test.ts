@@ -31,4 +31,26 @@ describe('job shift recurrence choices', () => {
     const weeks = jobShiftEndWeeks('2025-12-29')
     expect(weeks).toEqual([{ key: '2025-12-29', label: 'V1 2026', endsOn: '2025-12-31' }])
   })
+
+  it('keeps ISO week boundaries identical in UTC, Stockholm and distant host timezones', () => {
+    const originalTimezone = process.env.TZ
+    try {
+      const variants = ['UTC', 'Europe/Stockholm', 'America/Los_Angeles', 'Pacific/Kiritimati'].map(
+        (timezone) => {
+          process.env.TZ = timezone
+          return jobShiftEndWeeks('2026-08-26').slice(0, 2)
+        }
+      )
+
+      expect(variants).toEqual(
+        Array.from({ length: variants.length }, () => [
+          { key: '2026-08-24', label: 'V35 2026', endsOn: '2026-08-30' },
+          { key: '2026-08-31', label: 'V36 2026', endsOn: '2026-09-06' }
+        ])
+      )
+    } finally {
+      if (originalTimezone === undefined) delete process.env.TZ
+      else process.env.TZ = originalTimezone
+    }
+  })
 })

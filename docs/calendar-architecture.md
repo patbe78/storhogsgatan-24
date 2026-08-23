@@ -6,6 +6,8 @@ Kalendermodulen är uppdelad i databas-RPC:er, services, domänutilities, hooks,
 
 Tidsatta värden lagras som `timestamptz` och tolkas i `Europe/Stockholm`. Heldag lagras som startdatum och inkluderande slutdatum. Utility-lagret konverterar slutdatumet till exklusiv midnatt dagen efter vid överlappning och rendering.
 
+Datumvärden utan klockslag, exempelvis ISO-veckornas start och slut, beräknas som rena civila datum med UTC-baserad datumindexering. De får inte först skapas som lokal midnatt eller veckoslut och sedan konverteras till Stockholm, eftersom resultatet då beror på CI-maskinens tidszon. Releaseverifiering av ny datumlogik ska omfatta minst `TZ=UTC` och `TZ=Europe/Stockholm`; verkliga eventtider ska fortsatt använda den explicita Stockholm-tidszonen.
+
 ## Återkommande serier
 
 En eventrad är seriens mall. Regeln lagras i `calendar_recurrence_series`; förekomster materialiseras inte i databasen utan genereras begränsat för efterfrågat intervall. Modellen stöder dag, vecka, månad och år med positivt intervall samt inget slut, slutdatum eller antal.
