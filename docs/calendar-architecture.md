@@ -6,9 +6,15 @@ Kalendermodulen är uppdelad i databas-RPC:er, services, domänutilities, hooks,
 
 Tidsatta värden lagras som `timestamptz` och tolkas i `Europe/Stockholm`. Heldag lagras som startdatum och inkluderande slutdatum. Utility-lagret konverterar slutdatumet till exklusiv midnatt dagen efter vid överlappning och rendering.
 
+Datumvärden utan klockslag, exempelvis ISO-veckornas start och slut, beräknas som rena civila datum med UTC-baserad datumindexering. De får inte först skapas som lokal midnatt eller veckoslut och sedan konverteras till Stockholm, eftersom resultatet då beror på CI-maskinens tidszon. Releaseverifiering av ny datumlogik ska omfatta minst `TZ=UTC` och `TZ=Europe/Stockholm`; verkliga eventtider ska fortsatt använda den explicita Stockholm-tidszonen.
+
 ## Återkommande serier
 
 En eventrad är seriens mall. Regeln lagras i `calendar_recurrence_series`; förekomster materialiseras inte i databasen utan genereras begränsat för efterfrågat intervall. Modellen stöder dag, vecka, månad och år med positivt intervall samt inget slut, slutdatum eller antal.
+
+`weekdays smallint[]` är en valfri utökning för weekly-serier och använder ISO-dagarna 1=måndag till 7=söndag. `NULL` betyder exakt det äldre anchor-day-beteendet och kräver ingen omskrivning av befintliga serier. En lista, exempelvis `[1,2,3,4,5]`, expanderas inom veckor som räknas från startdatumets ISO-vecka och med seriens `interval_value`; dagar före `starts_on` i den första veckan skapas aldrig. Save/read-RPC, frontendgenerator, splitvalidering och reminder/push använder samma regel. Pushjournalens befintliga unika nyckel fortsätter att deduplicera per reminder, occurrence, mottagare och prenumeration.
+
+Jobbpassflödets slutveckor begränsas av startdatumets kalenderår. Etiketten använder däremot ISO-vecka och ISO-år, så en decembervecka kan heta exempelvis `V1 2026` samtidigt som seriens `ends_on` klipps till 31 december 2025.
 
 `Denna och framtida` avslutar originalserien dagen före vald förekomst. Vid redigering skapas en ny serie med `parent_series_id` och `split_from_date`. Vid radering skapas ingen ny serie. Tidigare förekomster bevaras. En intern databasfunktion verifierar att split-/raderingsdatumet är en faktisk förekomst enligt frekvens och intervall, ligger inom datum-/antalsgränserna och beräknar det auktoritativa antalet tidigare förekomster.
 
@@ -60,6 +66,7 @@ används inte av reminders, push-prenumerationer eller dispatch-funktioner.
 9. `20260811190000_create_calendar_default_filters.sql` skapar personliga defaultfilter, RLS och
    den atomiska replace-RPC:n.
 10. Kör `supabase/tests/calendar_default_filter_rls.sql` endast mot lokal/test-Supabase.
+11. `20260823090000_add_recurrence_weekdays.sql` lägger till nullable weekday-stöd och ersätter berörda recurrence-RPC:er. Migrationen ska granskas och dry-run-köras mot länkat projekt före separat godkänd produktionskörning.
 
 Ingen SQL i Sprint 3 körs automatiskt mot produktion.
 

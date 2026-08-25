@@ -5,12 +5,14 @@ export function CalendarConflictWarning({
   onSave,
   onBack,
   backLabel = 'Gå tillbaka och ändra',
+  conflictingOccurrenceCount,
   busy = false
 }: {
   conflicts: CalendarConflict[]
   onSave: () => void
   onBack: () => void
   backLabel?: string
+  conflictingOccurrenceCount?: number
   busy?: boolean
 }) {
   const names = [...new Set(conflicts.map((conflict) => conflict.participantName))]
@@ -18,7 +20,11 @@ export function CalendarConflictWarning({
     names.length < 2 ? names[0] : `${names.slice(0, -1).join(', ')} och ${names.at(-1)}`
   return (
     <div className="conflict-warning">
-      <p>{participantNames} har redan en aktivitet som överlappar den här tiden.</p>
+      <p>
+        {conflictingOccurrenceCount != null
+          ? `${conflictingOccurrenceCount} jobbpass överlappar befintliga aktiviteter.`
+          : `${participantNames} har redan en aktivitet som överlappar den här tiden.`}
+      </p>
       <div className="dialog-actions">
         <button type="button" className="secondary-button" disabled={busy} onClick={onBack}>
           {backLabel}

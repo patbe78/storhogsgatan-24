@@ -7,6 +7,7 @@ export interface CalendarRecurrenceRule {
   startsOn: string
   endsOn: string | null
   occurrenceCount: number | null
+  weekdays: number[] | null
   parentSeriesId: string | null
   splitFromDate: string | null
 }
@@ -16,4 +17,5 @@ export interface CalendarRecurrenceInput {
   intervalValue: number
   endsOn?: string | null
   occurrenceCount?: number | null
+  weekdays?: number[] | null
 }

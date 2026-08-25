@@ -4,6 +4,7 @@ export interface CalendarConflict {
   participantId: string
   participantName: string
   conflictingOccurrence: CalendarOccurrence
+  candidateOccurrence?: CalendarOccurrence
 }
 
 export function findCalendarConflicts(
