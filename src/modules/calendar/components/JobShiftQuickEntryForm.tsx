@@ -183,31 +183,36 @@ export function JobShiftQuickEntryForm({
       <div className="job-shift-time-grid">
         <div className="form-field">
           <label htmlFor={startDateId}>Startdatum *</label>
-          <input
-            id={startDateId}
-            data-calendar-dialog-initial-focus
-            type="date"
-            value={startDate}
-            onChange={(event) => updateStartDate(event.target.value)}
-          />
+          <div className="job-shift-native-input">
+            <input
+              id={startDateId}
+              type="date"
+              value={startDate}
+              onChange={(event) => updateStartDate(event.target.value)}
+            />
+          </div>
         </div>
         <div className="form-field">
           <label htmlFor={startTimeId}>Starttid *</label>
-          <input
-            id={startTimeId}
-            type="time"
-            value={startTime}
-            onChange={(event) => updateStartTime(event.target.value)}
-          />
+          <div className="job-shift-native-input">
+            <input
+              id={startTimeId}
+              type="time"
+              value={startTime}
+              onChange={(event) => updateStartTime(event.target.value)}
+            />
+          </div>
         </div>
         <div className="form-field">
           <label htmlFor={endTimeId}>Sluttid *</label>
-          <input
-            id={endTimeId}
-            type="time"
-            value={endTime}
-            onChange={(event) => updateEndTime(event.target.value)}
-          />
+          <div className="job-shift-native-input">
+            <input
+              id={endTimeId}
+              type="time"
+              value={endTime}
+              onChange={(event) => updateEndTime(event.target.value)}
+            />
+          </div>
         </div>
       </div>
       {errors.timing && <span className="field-error">{errors.timing}</span>}

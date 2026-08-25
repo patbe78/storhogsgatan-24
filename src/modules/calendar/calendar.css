@@ -842,12 +842,43 @@
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);
   gap: 10px;
 }
-.job-shift-time-grid > *,
-.job-shift-time-grid input[type='date'],
-.job-shift-time-grid input[type='time'] {
+.job-shift-time-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+.job-shift-native-input {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
   min-height: 48px;
+  padding: 0 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 9px;
+  background: #fff;
+}
+.job-shift-native-input:focus-within {
+  border-color: #84adff;
+  box-shadow: 0 0 0 3px #2e90fa1f;
+}
+.calendar-event-form .job-shift-native-input > input[type='date'],
+.calendar-event-form .job-shift-native-input > input[type='time'] {
+  display: block;
+  flex: 1 1 0;
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 .job-shift-recurrence-fields,
 .job-shift-recurrence-options {
@@ -1133,6 +1164,7 @@
   }
   .job-shift-time-grid {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
   }
   .job-shift-time-grid > :first-child {
     grid-column: 1 / -1;
