@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { vi } from 'vitest'
+import { CalendarDialog } from '../components/CalendarDialog'
 import { JobShiftQuickEntryForm } from '../components/JobShiftQuickEntryForm'
 import type { CalendarCategory } from '../types/calendar-category'
 import { getCalendarPermissions } from '../utils/calendar-permissions'
@@ -34,6 +35,21 @@ function props(overrides: Partial<React.ComponentProps<typeof JobShiftQuickEntry
 }
 
 describe('JobShiftQuickEntryForm', () => {
+  it('öppnar dialogen utan att fokusera datumfältet men låter användaren aktivera det', async () => {
+    render(
+      <CalendarDialog title="Lägg till jobbpass" open onClose={vi.fn()}>
+        <JobShiftQuickEntryForm {...props()} />
+      </CalendarDialog>
+    )
+
+    const date = screen.getByLabelText('Startdatum *')
+    expect(screen.getByRole('button', { name: 'Stäng' })).toHaveFocus()
+    expect(date).not.toHaveFocus()
+
+    await userEvent.click(date)
+    expect(date).toHaveFocus()
+  })
+
   it('visar rätt standardvärden och endast det fokuserade snabbflödet', () => {
     render(<JobShiftQuickEntryForm {...props()} />)
 

@@ -8,6 +8,8 @@ Tidsatta värden lagras som `timestamptz` och tolkas i `Europe/Stockholm`. Helda
 
 Datumvärden utan klockslag, exempelvis ISO-veckornas start och slut, beräknas som rena civila datum med UTC-baserad datumindexering. De får inte först skapas som lokal midnatt eller veckoslut och sedan konverteras till Stockholm, eftersom resultatet då beror på CI-maskinens tidszon. Releaseverifiering av ny datumlogik ska omfatta minst `TZ=UTC` och `TZ=Europe/Stockholm`; verkliga eventtider ska fortsatt använda den explicita Stockholm-tidszonen.
 
+Native iOS-formkontroller för `date`, `time` och motsvarande typer kräver separat manuell QA på fysisk iPhone före slutgodkännande. Playwright WebKit är obligatoriskt men inte tillräckligt för att verifiera operativsystemets picker-öppning, intrinsic sizing eller målning av native kontrollinnehåll. En mobilrelease får därför inte markeras som visuellt godkänd enbart utifrån emulator- eller browsertester.
+
 ## Återkommande serier
 
 En eventrad är seriens mall. Regeln lagras i `calendar_recurrence_series`; förekomster materialiseras inte i databasen utan genereras begränsat för efterfrågat intervall. Modellen stöder dag, vecka, månad och år med positivt intervall samt inget slut, slutdatum eller antal.
